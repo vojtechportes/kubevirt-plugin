@@ -1,5 +1,4 @@
 import { type FC, useMemo } from 'react';
-import { useWatch } from 'react-hook-form';
 
 import { type V1beta1DataSource } from '@kubevirt-ui-ext/kubevirt-api/containerized-data-importer';
 import { type V1beta1VirtualMachineClusterPreference } from '@kubevirt-ui-ext/kubevirt-api/kubevirt';
@@ -9,8 +8,6 @@ import { getUID, type ResourceMap } from '@kubevirt-utils/resources/shared';
 import { getTemplateName, type Template } from '@kubevirt-utils/resources/template';
 import { ARCHITECTURE_ID, ARCHITECTURE_TITLE } from '@kubevirt-utils/utils/architecture';
 import { Table, TableVariant, Tbody, Th, Thead, Tr } from '@patternfly/react-table';
-import { useVMWizard } from '@virtualmachines/wizard/state/vm-wizard-context/VMWizardContext';
-import { CREATE_VM_FORM_FIELDS_VM_DATA } from '@virtualmachines/wizard/state/vm-wizard-form/consts';
 
 import { getTemplateClusterPreference } from '../../../../utils/getTemplateClusterPreference';
 import TemplatesTableRow from './TemplatesTableRow';
@@ -24,6 +21,7 @@ type TemplatesTableProps = {
   clusterPreferencesByName: ResourceMap<V1beta1VirtualMachineClusterPreference>;
   loaded: boolean;
   onTemplateClick: (template: Template) => void;
+  selectedTemplate?: Template;
   templates: Template[];
 };
 
@@ -34,14 +32,10 @@ const TemplatesTable: FC<TemplatesTableProps> = ({
   clusterPreferencesByName,
   loaded,
   onTemplateClick,
+  selectedTemplate,
   templates,
 }) => {
   const { t } = useKubevirtTranslation();
-  const { control } = useVMWizard();
-  const selectedTemplate = useWatch({
-    control,
-    name: CREATE_VM_FORM_FIELDS_VM_DATA.SELECTED_TEMPLATE,
-  });
 
   const activeColumnIDs = useMemo(
     () => ['name', ARCHITECTURE_ID, 'category', 'source', 'cpu-memory'],

@@ -1,26 +1,16 @@
-import { type UseFormGetValues, type UseFormSetValue } from 'react-hook-form';
+import { type UseFormSetValue } from 'react-hook-form';
 import { type TFunction } from 'i18next';
 
+import { type V1VirtualMachine } from '@kubevirt-ui-ext/kubevirt-api/kubevirt';
 import { getInstanceTypeFromVolume } from '@kubevirt-utils/components/AddBootableVolumeModal/utils';
-import { cancelAllWizardPendingUploads } from '@kubevirt-utils/hooks/useUploadProgressToast';
+import { cancelAllWizardPendingUploads } from '@kubevirt-utils/hooks/useUploadProgressToast/cancel/cancelPendingVmUploads';
 import { getDiskSize } from '@kubevirt-utils/resources/bootableresources/selectors';
-import { setCustomizeWizardVMSignal } from '@kubevirt-utils/signals/customizeWizardVMSignal';
+import { type VMWizardFormValues } from '@virtualmachines/wizard/form/types';
 import CloneIcon from '@virtualmachines/wizard/steps/DeploymentDetailsStep/components/CreationMethodTileGroup/components/CreationMethodTile/components/CloneIcon';
 import { InstanceTypeIcon } from '@virtualmachines/wizard/steps/DeploymentDetailsStep/components/CreationMethodTileGroup/components/CreationMethodTile/components/InstanceTypeIcon';
 import TemplateIcon from '@virtualmachines/wizard/steps/DeploymentDetailsStep/components/CreationMethodTileGroup/components/CreationMethodTile/components/TemplateIcon';
-import {
-  CLONE_FLOW,
-  INSTANCE_TYPE_FLOW,
-  TEMPLATE_FLOW,
-  VMCreationMethod,
-  type VMWizardStep,
-} from '@virtualmachines/wizard/utils/constants';
 
-import {
-  CREATE_VM_FORM_FIELDS_INSTANCE_TYPE_DATA,
-  CREATE_VM_FORM_FIELDS_STEP_NAVIGATION,
-} from '../state/vm-wizard-form/consts';
-import { type VMWizardFormValues } from '../state/vm-wizard-form/types';
+import { VMCreationMethod } from './constants';
 import {
   type ApplySelectedBootableVolumeToForm,
   type VMCreationMethodCardDetails,
@@ -29,7 +19,6 @@ import {
 
 const VM_CREATION_METHOD_MAPPER: Record<VMCreationMethod, VMCreationMethodConfig> = {
   [VMCreationMethod.CLONE]: {
-    activeFlow: CLONE_FLOW,
     cardDetails: (t) => ({
       description: t('Create a copy of an existing VirtualMachine.'),
       IconComponent: CloneIcon,
@@ -37,7 +26,6 @@ const VM_CREATION_METHOD_MAPPER: Record<VMCreationMethod, VMCreationMethodConfig
     }),
   },
   [VMCreationMethod.INSTANCE_TYPE]: {
-    activeFlow: INSTANCE_TYPE_FLOW,
     cardDetails: (t) => ({
       description: t(
         'Create a new VM by selecting an operating system and the right performance for your workload.',
@@ -47,7 +35,6 @@ const VM_CREATION_METHOD_MAPPER: Record<VMCreationMethod, VMCreationMethodConfig
     }),
   },
   [VMCreationMethod.TEMPLATE]: {
-    activeFlow: TEMPLATE_FLOW,
     cardDetails: (t) => ({
       description: t(
         'Create a pre-configured VM using standardized images. This option requires an existing template.',
@@ -57,9 +44,6 @@ const VM_CREATION_METHOD_MAPPER: Record<VMCreationMethod, VMCreationMethodConfig
     }),
   },
 };
-
-export const getActiveFlow = (creationMethod: VMCreationMethod): readonly VMWizardStep[] =>
-  VM_CREATION_METHOD_MAPPER[creationMethod].activeFlow;
 
 export const getVMCreationMethodDetails = (
   creationMethod: VMCreationMethod,
@@ -75,64 +59,37 @@ export const isInstanceTypeCreationMethod = (creationMethod: VMCreationMethod): 
 
 export const applySelectedBootableVolumeToForm = ({
   dvSource,
-  getValues,
   pvcSource,
   selectedVolume,
   setValue,
   volumeSnapshotSource,
 }: ApplySelectedBootableVolumeToForm): void => {
-  const instanceTypeName = getInstanceTypeFromVolume(selectedVolume);
-  const [series = '', size = ''] = instanceTypeName?.split('.') || [];
+  const name = getInstanceTypeFromVolume(selectedVolume) ?? '';
+  const [series = '', size = ''] = name.split('.');
 
-  setValue(CREATE_VM_FORM_FIELDS_INSTANCE_TYPE_DATA.ROOT, {
-    ...getValues(CREATE_VM_FORM_FIELDS_INSTANCE_TYPE_DATA.ROOT),
-    customDiskSize: getDiskSize(dvSource, pvcSource, volumeSnapshotSource),
-    dvSource,
-    pvcSource,
-    selectedBootableVolume: selectedVolume,
-    selectedInstanceType: {
-      name: instanceTypeName,
-      namespace: null,
+  setValue(
+    'instanceType.bootVolume',
+    {
+      dataVolumeSource: dvSource,
+      diskSize: getDiskSize(dvSource, pvcSource, volumeSnapshotSource),
+      persistentVolumeClaimSource: pvcSource,
+      volume: selectedVolume,
+      volumeSnapshotSource,
     },
-    selectedSeries: series,
-    selectedSize: size,
-    volumeSnapshotSource,
+    { shouldValidate: true },
+  );
+  setValue('instanceType.compute', series && size ? { name, series, size, type: 'redhat' } : null, {
+    shouldValidate: true,
   });
 };
 
-export const resetBootableVolumeFields = (
-  getValues: UseFormGetValues<VMWizardFormValues>,
-  setValue: UseFormSetValue<VMWizardFormValues>,
-): void => {
-  setValue(CREATE_VM_FORM_FIELDS_INSTANCE_TYPE_DATA.ROOT, {
-    ...getValues(CREATE_VM_FORM_FIELDS_INSTANCE_TYPE_DATA.ROOT),
-    customDiskSize: '',
-    dvSource: null,
-    pvcSource: null,
-    selectedBootableVolume: null,
-    selectedInstanceType: null,
-    selectedSeries: '',
-    selectedSize: '',
-    volumeSnapshotSource: null,
-  });
+export const resetBootableVolumeFields = (setValue: UseFormSetValue<VMWizardFormValues>): void => {
+  setValue('instanceType.bootVolume', null, { shouldValidate: true });
+  setValue('instanceType.compute', null, { shouldValidate: true });
 };
 
-export const markStepVisited = (
-  stepId: string,
-  getValues: UseFormGetValues<VMWizardFormValues>,
-  setValue: UseFormSetValue<VMWizardFormValues>,
-): void => {
-  const visitedSteps = getValues(CREATE_VM_FORM_FIELDS_STEP_NAVIGATION.VISITED_STEPS);
-  if (visitedSteps.has(stepId)) {
-    return;
-  }
-
-  const nextVisitedSteps = new Set(visitedSteps);
-  nextVisitedSteps.add(stepId);
-  setValue(CREATE_VM_FORM_FIELDS_STEP_NAVIGATION.VISITED_STEPS, nextVisitedSteps);
-};
-
-export const clearVMPendingUploadsAndSignal = (): void => {
-  cancelAllWizardPendingUploads();
-  setCustomizeWizardVMSignal(null);
-};
+/** Cancels every upload owned by this wizard session using its explicit authoritative draft. */
+export const cancelWizardPendingUploads = (
+  vmDraft?: null | V1VirtualMachine,
+  bootableVolumeUploadKeys: string[] = [],
+): void => cancelAllWizardPendingUploads(vmDraft, bootableVolumeUploadKeys);

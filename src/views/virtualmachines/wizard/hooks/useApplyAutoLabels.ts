@@ -5,7 +5,7 @@ import { USER_SETTINGS_KEYS } from '@kubevirt-utils/hooks/useKubevirtUserSetting
 
 export type UseApplyAutoLabelsResult = {
   adminLabels: AutoAppliedLabel[];
-  isLoading?: boolean;
+  isLoading: boolean;
   userDefaults: Record<string, string>;
 };
 

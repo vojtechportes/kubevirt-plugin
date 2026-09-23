@@ -1,5 +1,5 @@
 import { type FC, type ReactNode } from 'react';
-import { type UseFormGetValues, type UseFormSetValue } from 'react-hook-form';
+import { type UseFormSetValue } from 'react-hook-form';
 import { type NavigateFunction } from 'react-router';
 import { type TFunction } from 'i18next';
 
@@ -18,9 +18,11 @@ import { type VolumeSnapshotKind } from '@kubevirt-utils/components/SelectSnapsh
 import { type BootableVolume } from '@kubevirt-utils/resources/bootableresources/types';
 import { type ClusterNamespacedResourceMap } from '@kubevirt-utils/resources/shared';
 import { type WizardStepProps, type WizardStepType } from '@patternfly/react-core';
+import {
+  type VMWizardDeploymentValues,
+  type VMWizardFormValues,
+} from '@virtualmachines/wizard/form/types';
 import { type VMWizardStep } from '@virtualmachines/wizard/utils/constants';
-
-import { type VMWizardFormValues } from '../state/vm-wizard-form/types';
 
 export type VMGenerationNavItemClickHandler = (
   step: WizardStepType,
@@ -31,7 +33,7 @@ export type VMGenerationNavItemClickHandler = (
 export type WizardStepNavItemConfig = {
   handleNavItemClick: VMGenerationNavItemClickHandler;
   isGeneratingVM: boolean;
-  loaded: boolean;
+  isStepDisabled: (step: VMWizardStep) => boolean;
 };
 
 export type VMWizardStepDisplay = WizardStepProps & {
@@ -40,8 +42,6 @@ export type VMWizardStepDisplay = WizardStepProps & {
 };
 
 export type GetStepsToDisplayByCreationMethodArgs = {
-  isNextDisabledForStep: (stepId: VMWizardStep) => boolean;
-  isStepDisabled: (stepId: VMWizardStep) => boolean;
   navItemConfig: WizardStepNavItemConfig;
   t: TFunction;
 };
@@ -71,7 +71,6 @@ export type UseBootableVolumesValues = {
 
 export type ApplySelectedBootableVolumeToForm = {
   dvSource: null | V1beta1DataVolume;
-  getValues: UseFormGetValues<VMWizardFormValues>;
   pvcSource: IoK8sApiCoreV1PersistentVolumeClaim | null;
   selectedVolume: BootableVolume;
   setValue: UseFormSetValue<VMWizardFormValues>;
@@ -85,20 +84,12 @@ export type VMCreationMethodCardDetails = {
 };
 
 export type VMCreationMethodConfig = {
-  activeFlow: VMWizardStep[];
   cardDetails: (t: TFunction) => VMCreationMethodCardDetails;
-};
-
-export type HandleWizardStepClick = {
-  currentStep: WizardStepType;
-  getValues: UseFormGetValues<VMWizardFormValues>;
-  hasLoggedCreationStarted: { current: boolean };
-  setValue: UseFormSetValue<VMWizardFormValues>;
 };
 
 export type HandleCloneRequestPhaseChangeParams = {
   cloneRequest: undefined | V1beta1VirtualMachineClone;
-  formValues: VMWizardFormValues['vmData'];
+  formValues: VMWizardDeploymentValues;
   navigate: NavigateFunction;
   setError: (error: unknown) => void;
   setIsSubmitting: (isSubmitting: boolean) => void;

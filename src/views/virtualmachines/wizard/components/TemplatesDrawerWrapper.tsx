@@ -2,30 +2,25 @@ import { type FC, type ReactNode } from 'react';
 import { useWatch } from 'react-hook-form';
 
 import { Drawer, DrawerContent, DrawerContentBody } from '@patternfly/react-core';
-import { useVMWizard } from '@virtualmachines/wizard/state/vm-wizard-context/VMWizardContext';
-import {
-  CREATE_VM_FORM_FIELDS_UI_STATE,
-  CREATE_VM_FORM_FIELDS_VM_DATA,
-} from '@virtualmachines/wizard/state/vm-wizard-form/consts';
+import { useVMWizardForm } from '@virtualmachines/wizard/form/VMWizardFormProvider';
+import { useVMWizardState } from '@virtualmachines/wizard/state/useVMWizardState';
 
 import { TemplatesCatalogDrawer } from '../steps/TemplateStep/components/TemplatesCatalogDrawer/TemplatesCatalogDrawer';
 
 const TemplatesDrawerWrapper: FC<{ children?: ReactNode }> = ({ children }) => {
-  const { control, setValue } = useVMWizard();
-  const [selectedTemplate, isTemplatesDrawerOpen] = useWatch({
-    control,
-    name: [
-      CREATE_VM_FORM_FIELDS_VM_DATA.SELECTED_TEMPLATE,
-      CREATE_VM_FORM_FIELDS_UI_STATE.IS_TEMPLATES_DRAWER_OPEN,
-    ],
+  const { isTemplateDrawerOpen, setIsTemplateDrawerOpen } = useVMWizardState();
+  const { control: targetControl } = useVMWizardForm();
+  const selectedTemplate = useWatch({
+    control: targetControl,
+    name: 'template.selectedTemplate',
   });
 
   const handleDrawerClose = (): void => {
-    setValue(CREATE_VM_FORM_FIELDS_UI_STATE.IS_TEMPLATES_DRAWER_OPEN, false);
+    setIsTemplateDrawerOpen(false);
   };
 
   return (
-    <Drawer isExpanded={isTemplatesDrawerOpen && !!selectedTemplate} position="end">
+    <Drawer isExpanded={isTemplateDrawerOpen && !!selectedTemplate} position="end">
       <DrawerContent
         panelContent={
           <TemplatesCatalogDrawer onClose={handleDrawerClose} template={selectedTemplate} />

@@ -10,14 +10,14 @@ import {
 } from '@openshift-console/dynamic-plugin-sdk';
 import { Table, TableVariant, Tbody, Td, Th, Thead, Tr } from '@patternfly/react-table';
 import { type ThSortType } from '@patternfly/react-table/dist/esm/components/Table/base/types';
-import { type SelectedInstanceType } from '@virtualmachines/wizard/state/vm-wizard-form/types';
+import { type InstanceTypeSelection } from '@virtualmachines/wizard/form/types';
 import { type InstanceTypes } from '@virtualmachines/wizard/utils/types';
 
 type UserProvidedInstanceTypeTableProps = {
   columns: TableColumn<InstanceTypes[number]>[];
   getSortType: (columnIndex: number) => ThSortType;
   onRowClick: (instanceTypeName: string, instanceTypeNamespace: string) => void;
-  selectedInstanceType: null | SelectedInstanceType;
+  selectedInstanceType: Extract<InstanceTypeSelection, { type: 'user' }> | null;
   sortedData: InstanceTypes;
 };
 

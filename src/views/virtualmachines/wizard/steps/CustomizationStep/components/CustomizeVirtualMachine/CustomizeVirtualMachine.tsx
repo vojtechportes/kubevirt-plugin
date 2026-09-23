@@ -1,12 +1,9 @@
 import type { FC } from 'react';
 
 import { Stack, StackItem } from '@patternfly/react-core';
-import { useSignals } from '@preact/signals-react/runtime';
 import CustomizeVMTabs from '@virtualmachines/wizard/steps/CustomizationStep/components/CustomizeVirtualMachine/components/CustomizeVMTabs/CustomizeVMTabs';
 
 const CustomizeVirtualMachine: FC = () => {
-  useSignals();
-
   return (
     <Stack>
       <StackItem isFilled>

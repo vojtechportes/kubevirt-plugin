@@ -26,6 +26,18 @@ export default class VmWizardComputeCustomizationComponent extends BaseComponent
     name: 'Hostname',
   });
   private readonly _hostnameModalSaveButton = this._hostnameModal.getByTestId('save-button');
+  private readonly _descriptionModal = this.testId('dialog-modal').filter({
+    has: this.page.getByRole('heading', { name: 'Description', exact: true }),
+  });
+  private readonly _descriptionModalTextarea = this._descriptionModal.getByRole('textbox', {
+    name: 'description text area',
+  });
+  private readonly _bootOrderModal = this.testId('dialog-modal').filter({
+    has: this.page.getByRole('heading', { name: 'VirtualMachine boot order' }),
+  });
+  private readonly _bootOrderModalListItems = this._bootOrderModal.locator(
+    '[aria-label="draggable data list example"] .pf-v6-c-data-list__item',
+  );
   private readonly _startAfterCreateCheckbox = this.locator('#start-after-create-checkbox');
   private readonly _startThisVirtualMachineAfterCreation = this.locator(
     'text=Start this VirtualMachine after creation',
@@ -264,6 +276,118 @@ export default class VmWizardComputeCustomizationComponent extends BaseComponent
 
   async submitHostnameModalWithEnter(): Promise<void> {
     await this._hostnameModalInput.press('Enter');
+  }
+
+  /** Opens the Description edit modal from the Customization > Details tab. */
+  async openCustomizationDescriptionModal(vmName: string): Promise<void> {
+    const editButton = this.testId(`${vmName}-description`);
+    await editButton.waitFor({ state: 'visible', timeout: TestTimeouts.UI_ELEMENT_VISIBILITY });
+    await this.robustClick(editButton);
+    await this._descriptionModal.waitFor({
+      state: 'visible',
+      timeout: TestTimeouts.UI_ELEMENT_VISIBILITY,
+    });
+  }
+
+  async fillCustomizationDescriptionModal(text: string): Promise<void> {
+    const textarea = this._descriptionModalTextarea;
+    await textarea.waitFor({ state: 'visible', timeout: TestTimeouts.SHORT_WAIT });
+    await textarea.fill(text);
+  }
+
+  async saveCustomizationDescriptionModal(): Promise<void> {
+    const saveButton = this._descriptionModal.getByTestId('save-button');
+    await this.robustClick(saveButton);
+    await this._descriptionModal.waitFor({
+      state: 'hidden',
+      timeout: TestTimeouts.UI_ACTION_COMPLETE,
+    });
+  }
+
+  /** Reads the description value as displayed on the Customization > Details tab (post-save). */
+  async getCustomizationDescription(vmName: string): Promise<string> {
+    const editButton = this.testId(`${vmName}-description`);
+    return (await editButton.textContent({ timeout: TestTimeouts.SHORT_WAIT }))?.trim() ?? '';
+  }
+
+  /** Expands the "Boot management" section on the Customization > Details tab, if collapsed. */
+  async expandBootManagementSection(): Promise<void> {
+    const toggle = this._roleTabpanel.locator('button').filter({ hasText: 'Boot management' });
+    await toggle.first().waitFor({ state: 'visible', timeout: TestTimeouts.UI_ELEMENT_VISIBILITY });
+    const isExpanded = await toggle.first().getAttribute('aria-expanded');
+    if (isExpanded !== 'true') {
+      await this.robustClick(toggle.first());
+      await this.page.waitForTimeout(TestTimeouts.UI_DELAY_SHORT);
+    }
+  }
+
+  /** Opens the boot order edit modal from the Customization > Details tab (expands the section first). */
+  async openBootOrderModal(vmName: string): Promise<void> {
+    await this.expandBootManagementSection();
+    const editButton = this.testId(`${vmName}-boot-order`);
+    await editButton.waitFor({ state: 'visible', timeout: TestTimeouts.UI_ELEMENT_VISIBILITY });
+    await this.robustClick(editButton);
+    await this._bootOrderModal.waitFor({
+      state: 'visible',
+      timeout: TestTimeouts.UI_ELEMENT_VISIBILITY,
+    });
+  }
+
+  /** Device names in their current order, as listed inside the open boot order modal. */
+  async getBootOrderModalDeviceNames(): Promise<string[]> {
+    const items = this._bootOrderModalListItems;
+    await items.first().waitFor({ state: 'visible', timeout: TestTimeouts.UI_ELEMENT_VISIBILITY });
+    const count = await items.count();
+    const names: string[] = [];
+    for (let i = 0; i < count; i++) {
+      const text = (await items.nth(i).locator('span[id]').first().textContent())?.trim();
+      if (text) names.push(text);
+    }
+    return names;
+  }
+
+  /**
+   * Reorders a boot device within the open modal using the keyboard-accessible drag handle
+   * (Space to grab, Arrow keys to move, Enter to drop).
+   */
+  async reorderBootDeviceInModal(
+    deviceName: string,
+    direction: 'up' | 'down',
+    steps = 1,
+  ): Promise<void> {
+    const item = this._bootOrderModalListItems.filter({ hasText: deviceName });
+    const dragButton = item.first().locator('button[aria-label="Reorder"]');
+    await dragButton.waitFor({ state: 'visible', timeout: TestTimeouts.UI_ELEMENT_VISIBILITY });
+    await dragButton.focus();
+    await this.page.keyboard.press('Space');
+    for (let i = 0; i < steps; i++) {
+      await this.page.keyboard.press(direction === 'up' ? 'ArrowUp' : 'ArrowDown');
+      await this.page.waitForTimeout(TestTimeouts.UI_DELAY_MICRO);
+    }
+    await this.page.keyboard.press('Enter');
+  }
+
+  async saveBootOrderModal(): Promise<void> {
+    const saveButton = this._bootOrderModal.getByTestId('save-button');
+    await this.robustClick(saveButton);
+    await this._bootOrderModal.waitFor({
+      state: 'hidden',
+      timeout: TestTimeouts.UI_ACTION_COMPLETE,
+    });
+  }
+
+  /** Reads the boot order device names as displayed on the Customization > Details tab (post-save). */
+  async getDisplayedBootOrder(vmName: string): Promise<string[]> {
+    const container = this.testId(`${vmName}-boot-order`);
+    await container.waitFor({ state: 'visible', timeout: TestTimeouts.UI_ELEMENT_VISIBILITY });
+    const items = container.locator('li');
+    const count = await items.count();
+    const names: string[] = [];
+    for (let i = 0; i < count; i++) {
+      const text = (await items.nth(i).textContent())?.trim();
+      if (text) names.push(text);
+    }
+    return names;
   }
 
   async getReviewDescription(): Promise<string> {

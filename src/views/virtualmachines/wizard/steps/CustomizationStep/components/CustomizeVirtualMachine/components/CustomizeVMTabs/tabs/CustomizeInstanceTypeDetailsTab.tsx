@@ -1,5 +1,4 @@
-import { type FC, useEffect, useState } from 'react';
-import { useWatch } from 'react-hook-form';
+import { type FC } from 'react';
 
 import { VirtualMachineModel } from '@kubevirt-ui-ext/kubevirt-api/console';
 import Loading from '@kubevirt-utils/components/Loading/Loading';
@@ -10,20 +9,16 @@ import {
 import { useFeatures } from '@kubevirt-utils/hooks/useFeatures/useFeatures';
 import { getPreferredBootmode } from '@kubevirt-utils/resources/preference/helper';
 import { asAccessReview } from '@kubevirt-utils/resources/shared';
-import { getDevices } from '@kubevirt-utils/resources/vm';
 import { type K8sVerb, useAccessReview } from '@openshift-console/dynamic-plugin-sdk';
 import { Grid } from '@patternfly/react-core';
-import { isDeletionProtectionEnabled } from '@virtualmachines/details/tabs/configuration/details/components/DeletionProtection/utils/utils';
-import { useVMWizard } from '@virtualmachines/wizard/state/vm-wizard-context/VMWizardContext';
-import { CREATE_VM_FORM_FIELDS_CUSTOMIZED_VM } from '@virtualmachines/wizard/state/vm-wizard-form/consts';
+import { useWizardVMDraft } from '@virtualmachines/wizard/hooks/useWizardVMDraft';
 
 import usePreference from '../hooks/usePreference';
 import DetailsLeftColumn from './components/DetailsLeftColumn';
 import DetailsRightColumn from './components/DetailsRightColumn';
 
 const CustomizeInstanceTypeDetailsTab: FC = () => {
-  const { control } = useVMWizard();
-  const vm = useWatch({ control, name: CREATE_VM_FORM_FIELDS_CUSTOMIZED_VM });
+  const { vmDraft: vm } = useWizardVMDraft();
 
   const [preference, preferenceLoading] = usePreference(vm);
 
@@ -35,19 +30,6 @@ const CustomizeInstanceTypeDetailsTab: FC = () => {
   );
   const { featureEnabled: treeViewFoldersEnabled } = useFeatures(TREE_VIEW_FOLDERS);
 
-  const logSerialConsole = getDevices(vm)?.logSerialConsole;
-  const [isCheckedGuestSystemAccessLog, setIsCheckedGuestSystemAccessLog] = useState<boolean>();
-
-  const deletionProtectionEnabled = isDeletionProtectionEnabled(vm);
-
-  useEffect(
-    () =>
-      setIsCheckedGuestSystemAccessLog(
-        logSerialConsole || (logSerialConsole === undefined && !isGuestSystemLogsDisabled),
-      ),
-    [isGuestSystemLogsDisabled, logSerialConsole],
-  );
-
   if (!vm || preferenceLoading) {
     return <Loading />;
   }
@@ -55,10 +37,7 @@ const CustomizeInstanceTypeDetailsTab: FC = () => {
   return (
     <Grid>
       <DetailsLeftColumn
-        deletionProtectionEnabled={deletionProtectionEnabled}
-        isCheckedGuestSystemAccessLog={isCheckedGuestSystemAccessLog}
         isGuestSystemLogsDisabled={isGuestSystemLogsDisabled}
-        setIsCheckedGuestSystemAccessLog={setIsCheckedGuestSystemAccessLog}
         treeViewFoldersEnabled={treeViewFoldersEnabled}
       />
       <DetailsRightColumn

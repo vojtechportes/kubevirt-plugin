@@ -3,18 +3,17 @@ import { useWatch } from 'react-hook-form';
 
 import useIsWindowsSupportedArchitecture from '@kubevirt-utils/hooks/useIsWindowsSupportedArchitecture';
 import { Split, SplitItem } from '@patternfly/react-core';
-import { useVMWizard } from '@virtualmachines/wizard/state/vm-wizard-context/VMWizardContext';
-import { CREATE_VM_FORM_FIELDS_INSTANCE_TYPE_DATA } from '@virtualmachines/wizard/state/vm-wizard-form/consts';
+import { useVMWizardForm } from '@virtualmachines/wizard/form/VMWizardFormProvider';
 import { OperatingSystemType } from '@virtualmachines/wizard/steps/InstanceTypesSteps/GuestOSStep/utils/constants';
 import { resetBootableVolumeFields } from '@virtualmachines/wizard/utils/utils';
 
 import OperatingSystemTile from './components/OperatingSystemTile/OperatingSystemTile';
 
 const OperatingSystemTileGroup: FC = () => {
-  const { control, getValues, setValue } = useVMWizard();
+  const { control, setValue } = useVMWizardForm();
   const operatingSystemType: OperatingSystemType = useWatch({
     control,
-    name: CREATE_VM_FORM_FIELDS_INSTANCE_TYPE_DATA.OPERATING_SYSTEM_TYPE,
+    name: 'instanceType.operatingSystem',
   });
   const isWindowsSupported = useIsWindowsSupportedArchitecture();
 
@@ -31,8 +30,8 @@ const OperatingSystemTileGroup: FC = () => {
           <OperatingSystemTile
             isSelected={operatingSystemType === osType}
             onClick={() => {
-              setValue(CREATE_VM_FORM_FIELDS_INSTANCE_TYPE_DATA.OPERATING_SYSTEM_TYPE, osType);
-              resetBootableVolumeFields(getValues, setValue);
+              setValue('instanceType.operatingSystem', osType, { shouldValidate: true });
+              resetBootableVolumeFields(setValue);
             }}
             operatingSystem={osType}
           />

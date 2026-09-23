@@ -9,15 +9,12 @@ import { DEFAULT_NAMESPACE } from '@kubevirt-utils/constants/constants';
 import { TREE_VIEW_FOLDERS } from '@kubevirt-utils/hooks/useFeatures/constants';
 import { useFeatures } from '@kubevirt-utils/hooks/useFeatures/useFeatures';
 import { useKubevirtTranslation } from '@kubevirt-utils/hooks/useKubevirtTranslation';
-import { setCustomizeWizardVMSignal } from '@kubevirt-utils/signals/customizeWizardVMSignal';
 import useIsACMPage from '@multicluster/useIsACMPage';
 import { Form, FormGroup } from '@patternfly/react-core';
 import { useHubClusterName } from '@stolostron/multicluster-sdk';
-import { useVMWizard } from '@virtualmachines/wizard/state/vm-wizard-context/VMWizardContext';
-import {
-  CREATE_VM_FORM_FIELDS_CUSTOMIZED_VM,
-  CREATE_VM_FORM_FIELDS_VM_DATA,
-} from '@virtualmachines/wizard/state/vm-wizard-form/consts';
+import { useVMWizardForm } from '@virtualmachines/wizard/form/VMWizardFormProvider';
+import { useWizardVMDraft } from '@virtualmachines/wizard/hooks/useWizardVMDraft';
+import { VMCreationMethod } from '@virtualmachines/wizard/utils/constants';
 
 import './VMCreationLocationForm.scss';
 
@@ -29,15 +26,20 @@ const VMCreationLocationForm: FC = () => {
   const { featureEnabled: treeViewFoldersEnabled, loading: treeViewFoldersLoading } =
     useFeatures(TREE_VIEW_FOLDERS);
 
-  const { control, setValue } = useVMWizard();
+  const { control, getValues, setValue } = useVMWizardForm();
+  const { clearDraft } = useWizardVMDraft();
+
   const [cluster, folder, project] = useWatch({
     control,
-    name: [
-      CREATE_VM_FORM_FIELDS_VM_DATA.CLUSTER,
-      CREATE_VM_FORM_FIELDS_VM_DATA.FOLDER,
-      CREATE_VM_FORM_FIELDS_VM_DATA.PROJECT,
-    ],
+    name: ['deployment.cluster', 'deployment.folder', 'deployment.project'],
   });
+
+  const clearLocationDependentVM = (): void => {
+    if (getValues('creationMethod') === VMCreationMethod.CLONE) {
+      setValue('clone.sourceVM', null, { shouldValidate: true });
+    }
+    clearDraft();
+  };
 
   return (
     <Form className="vm-creation-location-form">
@@ -45,7 +47,7 @@ const VMCreationLocationForm: FC = () => {
         <FormGroup isRequired label={t('Cluster')}>
           <Controller
             control={control}
-            name={CREATE_VM_FORM_FIELDS_VM_DATA.CLUSTER}
+            name="deployment.cluster"
             render={({ field: { ref: _ref, value, ...field } }) => (
               <ClusterDropdown
                 {...field}
@@ -53,10 +55,10 @@ const VMCreationLocationForm: FC = () => {
                 includeAllClusters={false}
                 onChange={(selectedCluster) => {
                   field.onChange(selectedCluster);
-                  setValue(CREATE_VM_FORM_FIELDS_VM_DATA.FOLDER, '');
+                  setValue('deployment.folder', '');
                   if (selectedCluster !== cluster)
-                    setValue(CREATE_VM_FORM_FIELDS_VM_DATA.PROJECT, '');
-                  setValue(CREATE_VM_FORM_FIELDS_CUSTOMIZED_VM, null);
+                    setValue('deployment.project', '', { shouldValidate: true });
+                  clearLocationDependentVM();
                 }}
                 selectedCluster={value as string}
               />
@@ -67,7 +69,7 @@ const VMCreationLocationForm: FC = () => {
       <FormGroup isRequired label={t('Project')}>
         <Controller
           control={control}
-          name={CREATE_VM_FORM_FIELDS_VM_DATA.PROJECT}
+          name="deployment.project"
           render={({ field: { ref: _ref, ...field } }) => (
             <NamespaceDropdown
               {...field}
@@ -76,9 +78,8 @@ const VMCreationLocationForm: FC = () => {
               includeAllProjects={false}
               onChange={(selectedProject) => {
                 field.onChange(selectedProject);
-                setValue(CREATE_VM_FORM_FIELDS_VM_DATA.FOLDER, '');
-                setCustomizeWizardVMSignal(null);
-                setValue(CREATE_VM_FORM_FIELDS_CUSTOMIZED_VM, null);
+                setValue('deployment.folder', '');
+                clearLocationDependentVM();
               }}
               selectedProject={project || DEFAULT_NAMESPACE}
             />
@@ -102,9 +103,7 @@ const VMCreationLocationForm: FC = () => {
           isDisabled={treeViewFoldersLoading || !treeViewFoldersEnabled}
           namespace={project}
           selectedFolder={folder}
-          setSelectedFolder={(newFolder) =>
-            setValue(CREATE_VM_FORM_FIELDS_VM_DATA.FOLDER, newFolder)
-          }
+          setSelectedFolder={(newFolder) => setValue('deployment.folder', newFolder)}
         />
       </FormGroup>
     </Form>

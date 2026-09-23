@@ -7,11 +7,8 @@ import { logTemplateFlowEvent, TEMPLATE_SELECTED } from '@kubevirt-utils/extensi
 import { type Template } from '@kubevirt-utils/resources/template';
 import { isEmpty } from '@kubevirt-utils/utils/utils';
 import { Card, Split, SplitItem } from '@patternfly/react-core';
-import { useVMWizard } from '@virtualmachines/wizard/state/vm-wizard-context/VMWizardContext';
-import {
-  CREATE_VM_FORM_FIELDS_UI_STATE,
-  CREATE_VM_FORM_FIELDS_VM_DATA,
-} from '@virtualmachines/wizard/state/vm-wizard-form/consts';
+import { useVMWizardForm } from '@virtualmachines/wizard/form/VMWizardFormProvider';
+import { useVMWizardState } from '@virtualmachines/wizard/state/useVMWizardState';
 import TemplatesCatalogEmptyState from '@virtualmachines/wizard/steps/TemplateStep/components/TemplatesCatalog/components/TemplatesCatalogEmptyState';
 import TemplatesCatalogItems from '@virtualmachines/wizard/steps/TemplateStep/components/TemplatesCatalog/components/TemplatesCatalogItems/TemplatesCatalogItems';
 import CatalogSkeleton from '@virtualmachines/wizard/steps/TemplateStep/components/TemplatesCatalog/components/TemplatesCatalogSkeleton';
@@ -22,6 +19,8 @@ import useTemplatesCatalog from './hooks/useTemplatesCatalog';
 import './TemplateCatalog.scss';
 
 const TemplatesCatalog: FC = () => {
+  const { setIsTemplateDrawerOpen, setTemplateProcessError } = useVMWizardState();
+
   const {
     availableDataSources,
     availableTemplatesUID,
@@ -40,21 +39,25 @@ const TemplatesCatalog: FC = () => {
     setNamespace,
   } = useTemplatesCatalog();
 
-  const { control, setValue } = useVMWizard();
+  const { control, getValues, setValue } = useVMWizardForm();
+
   const selectedTemplate = useWatch({
     control,
-    name: CREATE_VM_FORM_FIELDS_VM_DATA.SELECTED_TEMPLATE,
+    name: 'template.selectedTemplate',
   });
 
   const handleTemplateSelect = useCallback(
     (template: Template) => {
-      setValue(CREATE_VM_FORM_FIELDS_VM_DATA.SELECTED_TEMPLATE, template);
-      setValue(CREATE_VM_FORM_FIELDS_UI_STATE.TEMPLATE_PROCESS_ERROR, null);
-      setValue(CREATE_VM_FORM_FIELDS_UI_STATE.LAST_PROCESSED_TEMPLATE_KEY, '');
+      const options = { shouldValidate: true } as const;
+      setValue('template.generationRevision', getValues('template.generationRevision') + 1);
+      setValue('template.selectedTemplate', template, options);
+
+      setTemplateProcessError(null);
+      setIsTemplateDrawerOpen(true);
+
       logTemplateFlowEvent(TEMPLATE_SELECTED, template);
-      setValue(CREATE_VM_FORM_FIELDS_UI_STATE.IS_TEMPLATES_DRAWER_OPEN, true);
     },
-    [setValue],
+    [getValues, setIsTemplateDrawerOpen, setTemplateProcessError, setValue],
   );
 
   if (!loaded) {

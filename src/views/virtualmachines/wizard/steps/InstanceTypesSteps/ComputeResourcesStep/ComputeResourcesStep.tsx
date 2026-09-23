@@ -4,7 +4,7 @@ import { useKubevirtTranslation } from '@kubevirt-utils/hooks/useKubevirtTransla
 import { Stack, StackItem, Title, TitleSizes } from '@patternfly/react-core';
 import SelectInstanceTypeSection from '@virtualmachines/wizard/steps/InstanceTypesSteps/ComputeResourcesStep/components/SelectInstanceTypeSection/SelectInstanceTypeSection';
 
-const ComputeResourcesStep: FC = ({}) => {
+const ComputeResourcesStep: FC = () => {
   const { t } = useKubevirtTranslation();
 
   return (

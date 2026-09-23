@@ -15,8 +15,7 @@ import {
 } from '@kubevirt-utils/resources/shared';
 import { Table, TableVariant, Tbody, Th, Thead, Tr } from '@patternfly/react-table';
 import { type ThSortType } from '@patternfly/react-table/dist/esm/components/Table/base/types';
-import { useVMWizard } from '@virtualmachines/wizard/state/vm-wizard-context/VMWizardContext';
-import { CREATE_VM_FORM_FIELDS_INSTANCE_TYPE_DATA } from '@virtualmachines/wizard/state/vm-wizard-form/consts';
+import { useVMWizardForm } from '@virtualmachines/wizard/form/VMWizardFormProvider';
 import { getBootableVolumeRowData } from '@virtualmachines/wizard/steps/InstanceTypesSteps/BootSourceStep/components/BootableVolumeList/utils/getBootableVolumeRowData';
 import {
   type ApplySelectedBootableVolumeToForm,
@@ -46,25 +45,24 @@ const BootableVolumeTable: FC<BootableVolumeTableProps> = ({
   userPreferencesMap,
   volumeListNamespace,
 }) => {
-  const { control, getValues, setValue } = useVMWizard();
+  const { control, setValue } = useVMWizardForm();
 
-  const selectedBootableVolume = useWatch({
+  const bootVolume = useWatch({
     control,
-    name: CREATE_VM_FORM_FIELDS_INSTANCE_TYPE_DATA.SELECTED_BOOTABLE_VOLUME,
+    name: 'instanceType.bootVolume',
   });
 
   const onSelectBootableVolume = useCallback(
-    (args: ApplySelectedBootableVolumeToForm) => {
+    (args: Omit<ApplySelectedBootableVolumeToForm, 'setValue'>) => {
       applySelectedBootableVolumeToForm({
         ...args,
-        getValues,
         setValue,
       });
       logITFlowEvent(BOOTABLE_VOLUME_SELECTED, null, {
         selectedBootableVolume: getName(args.selectedVolume),
       });
     },
-    [getValues, setValue],
+    [setValue],
   );
 
   return (
@@ -92,7 +90,7 @@ const BootableVolumeTable: FC<BootableVolumeTableProps> = ({
               userPreferencesMap,
               volumeListNamespace,
             })}
-            selectedBootableVolume={selectedBootableVolume}
+            selectedBootableVolume={bootVolume?.volume}
           />
         ))}
       </Tbody>

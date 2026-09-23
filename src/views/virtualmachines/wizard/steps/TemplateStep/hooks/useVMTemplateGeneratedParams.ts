@@ -13,17 +13,16 @@ import {
 } from '@kubevirt-utils/resources/template';
 import { generateParamsWithPrettyName } from '@kubevirt-utils/resources/template/utils/helpers';
 import { isEmpty } from '@kubevirt-utils/utils/utils';
-import { useVMWizard } from '@virtualmachines/wizard/state/vm-wizard-context/VMWizardContext';
-import { CREATE_VM_FORM_FIELDS_VM_DATA } from '@virtualmachines/wizard/state/vm-wizard-form/consts';
+import { useVMWizardForm } from '@virtualmachines/wizard/form/VMWizardFormProvider';
 
 const useVMTemplateGeneratedParams = (
   template: Template,
   namespaceOverride?: string,
 ): [template: Template, loading: boolean, error: Error] => {
-  const { control } = useVMWizard();
+  const { control } = useVMWizardForm();
   const [cluster, project] = useWatch({
     control,
-    name: [CREATE_VM_FORM_FIELDS_VM_DATA.CLUSTER, CREATE_VM_FORM_FIELDS_VM_DATA.PROJECT],
+    name: ['deployment.cluster', 'deployment.project'],
   });
   const [error, setError] = useState<Error>();
   const namespace = [namespaceOverride, project].find((ns) => ns) ?? DEFAULT_NAMESPACE;

@@ -13,8 +13,7 @@ import {
   useVMTemplateSource,
 } from '@kubevirt-utils/resources/template';
 import { useOpenShiftTemplates } from '@templates/list/hooks/useOpenShiftTemplates';
-import { useVMWizard } from '@virtualmachines/wizard/state/vm-wizard-context/VMWizardContext';
-import { CREATE_VM_FORM_FIELDS_VM_DATA } from '@virtualmachines/wizard/state/vm-wizard-form/consts';
+import { useVMWizardForm } from '@virtualmachines/wizard/form/VMWizardFormProvider';
 import useVMTemplateGeneratedParams from '@virtualmachines/wizard/steps/TemplateStep/hooks/useVMTemplateGeneratedParams';
 import { buildOSDisplayNameMap } from '@virtualmachines/wizard/steps/TemplateStep/utils/buildOSDisplayNameMap';
 import { getTemplateClusterPreference } from '@virtualmachines/wizard/steps/TemplateStep/utils/getTemplateClusterPreference';
@@ -36,8 +35,8 @@ type DrawerContextProviderProps = {
 
 const useDrawer = (initialTemplate: Template): DrawerContext => {
   const [template, setTemplate] = useImmer(initialTemplate);
-  const { control } = useVMWizard();
-  const cluster = useWatch({ control, name: CREATE_VM_FORM_FIELDS_VM_DATA.CLUSTER });
+  const { control } = useVMWizardForm();
+  const cluster = useWatch({ control, name: 'deployment.cluster' });
   const [templateWithGeneratedParams, loading, error] =
     useVMTemplateGeneratedParams(initialTemplate);
   const { loaded: bootSourceLoaded } = useVMTemplateSource(initialTemplate, cluster);
@@ -58,7 +57,6 @@ const useDrawer = (initialTemplate: Template): DrawerContext => {
     [clusterPreferencesByName, resolvedTemplate],
   );
 
-  // reset drawer template state when selected template changes
   useEffect(() => {
     setTemplate(initialTemplate);
   }, [initialTemplate, setTemplate]);

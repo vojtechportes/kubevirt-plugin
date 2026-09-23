@@ -5,8 +5,7 @@ import { type PreferenceOption } from '@kubevirt-utils/components/AddBootableVol
 import useClusterPreferences from '@kubevirt-utils/hooks/useClusterPreferences';
 import useHcoWorkloadArchitectures from '@kubevirt-utils/hooks/useHcoWorkloadArchitectures';
 import useUserPreferences from '@kubevirt-utils/hooks/useUserPreferences';
-import { useVMWizard } from '@virtualmachines/wizard/state/vm-wizard-context/VMWizardContext';
-import { CREATE_VM_FORM_FIELDS_INSTANCE_TYPE_DATA } from '@virtualmachines/wizard/state/vm-wizard-form/consts';
+import { useVMWizardForm } from '@virtualmachines/wizard/form/VMWizardFormProvider';
 import {
   getDefaultPreference,
   getSortedPreferencesByOSType,
@@ -27,10 +26,10 @@ const usePreferenceSelectOptions: UsePreferenceSelectOptions = (
   cluster,
   operatingSystemType,
 ) => {
-  const { control, setValue } = useVMWizard();
+  const { control, setValue } = useVMWizardForm();
   const preference = useWatch({
     control,
-    name: CREATE_VM_FORM_FIELDS_INSTANCE_TYPE_DATA.PREFERENCE,
+    name: 'instanceType.preference',
   });
   const [architectures, architecturesLoaded] = useHcoWorkloadArchitectures(cluster);
   const [clusterPreferences, clusterPreferencesLoaded] = useClusterPreferences(null, null, cluster);
@@ -48,7 +47,6 @@ const usePreferenceSelectOptions: UsePreferenceSelectOptions = (
     const allPreferences = [...(clusterPreferences || []), ...(userPreferences || [])];
     return getSortedPreferencesByOSType(allPreferences, operatingSystemType);
   }, [clusterPreferences, userPreferences, operatingSystemType]);
-
   useEffect(() => {
     if (!isPreferencesLoaded) return;
 
@@ -57,7 +55,7 @@ const usePreferenceSelectOptions: UsePreferenceSelectOptions = (
       preference && preferences.some((pref) => pref.name === preference.name);
 
     if (!isCurrentPreferenceValid && defaultPref) {
-      setValue(CREATE_VM_FORM_FIELDS_INSTANCE_TYPE_DATA.PREFERENCE, defaultPref);
+      setValue('instanceType.preference', defaultPref, { shouldValidate: true });
     }
   }, [architectures, isPreferencesLoaded, operatingSystemType, preference, preferences, setValue]);
 

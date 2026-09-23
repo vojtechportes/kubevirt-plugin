@@ -10,21 +10,22 @@ import {
   ActionListGroup,
   ActionListItem,
   Button,
-  useWizardContext,
   WizardFooterWrapper,
 } from '@patternfly/react-core';
 import VMNameConfirmationNextButton from '@virtualmachines/wizard/components/VMNameConfirmationNextButton';
+import { useVMWizardForm } from '@virtualmachines/wizard/form/VMWizardFormProvider';
 import useCloseWizard from '@virtualmachines/wizard/hooks/useCloseWizard';
-import { useVMWizard } from '@virtualmachines/wizard/state/vm-wizard-context/VMWizardContext';
-import { CREATE_VM_FORM_FIELDS_VM_DATA } from '@virtualmachines/wizard/state/vm-wizard-form/consts';
+import useWizardFooterNavigation from '@virtualmachines/wizard/hooks/useWizardFooterNavigation';
+import { type WizardStepNavItemConfig } from '@virtualmachines/wizard/utils/types';
 import { isCloneCreationMethod } from '@virtualmachines/wizard/utils/utils';
 
-const DeploymentDetailsStepFooter: FC = () => {
+const DeploymentDetailsStepFooter: FC<{ navigation: WizardStepNavItemConfig }> = ({
+  navigation,
+}) => {
+  const { control } = useVMWizardForm();
+  const creationMethod = useWatch({ control, name: 'creationMethod' });
   const hasOLSConsole = useFlag(FLAG_LIGHTSPEED_PLUGIN);
-  const { goToNextStep } = useWizardContext();
-  const { control } = useVMWizard();
-  const creationMethod = useWatch({ control, name: CREATE_VM_FORM_FIELDS_VM_DATA.CREATION_METHOD });
-  const isCloneMethod = isCloneCreationMethod(creationMethod);
+  const { isNextDisabled, onNext } = useWizardFooterNavigation(navigation);
   const closeWizard = useCloseWizard();
   const { backButtonText, cancelButtonText, nextButtonText } = useWizardFooterProps();
 
@@ -38,12 +39,12 @@ const DeploymentDetailsStepFooter: FC = () => {
             </Button>
           </ActionListItem>
           <ActionListItem>
-            {isCloneMethod ? (
-              <Button data-test="wizard-next-button" onClick={goToNextStep} variant="primary">
+            {isCloneCreationMethod(creationMethod) ? (
+              <Button data-test="wizard-next-button" isDisabled={isNextDisabled} onClick={onNext}>
                 {nextButtonText}
               </Button>
             ) : (
-              <VMNameConfirmationNextButton onClick={goToNextStep}>
+              <VMNameConfirmationNextButton onClick={onNext} validateOnClick={false}>
                 {nextButtonText}
               </VMNameConfirmationNextButton>
             )}

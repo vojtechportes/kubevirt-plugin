@@ -19,15 +19,11 @@ export const getSpecConfiguration = ({
   context,
   instanceTypeData,
 }: GenerateVMSpecConfiguration): VMSpec => {
-  const {
-    customDiskSize,
-    dvSource,
-    preference,
-    pvcSource,
-    selectedBootableVolume,
-    selectedInstanceType,
-    useBootSource,
-  } = instanceTypeData;
+  const { bootVolume, compute, preference, useBootSource } = instanceTypeData;
+  const customDiskSize = bootVolume?.diskSize;
+  const dvSource = bootVolume?.dataVolumeSource;
+  const pvcSource = bootVolume?.persistentVolumeClaimSource;
+  const selectedBootableVolume = bootVolume?.volume ?? null;
   const {
     enableMultiArchBootImageImport,
     isIPv6SingleStack,
@@ -42,7 +38,7 @@ export const getSpecConfiguration = ({
     preference,
   );
   const instanceTypeName =
-    selectedInstanceType?.name ?? getLabels(selectedBootableVolume)?.[DEFAULT_INSTANCETYPE_LABEL];
+    compute?.name ?? getLabels(selectedBootableVolume)?.[DEFAULT_INSTANCETYPE_LABEL];
   const hasBootVolume = useBootSource && !isEmpty(selectedBootableVolume);
   const isIso = hasBootVolume && isBootableVolumeISO(selectedBootableVolume);
   const storageClassName = getPVCStorageClassName(pvcSource);
@@ -64,9 +60,10 @@ export const getSpecConfiguration = ({
       }),
     ...(instanceTypeName && {
       instancetype: {
-        ...(selectedInstanceType?.namespace && {
-          kind: VirtualMachineInstancetypeModel.kind,
-        }),
+        ...(compute?.type === 'user' &&
+          compute.namespace && {
+            kind: VirtualMachineInstancetypeModel.kind,
+          }),
         name: instanceTypeName,
       },
     }),

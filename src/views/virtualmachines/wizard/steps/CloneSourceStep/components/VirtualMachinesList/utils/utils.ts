@@ -95,7 +95,7 @@ type VMConfiguration = {
 
 export const getVMConfiguration = (
   currentVM: V1VirtualMachine,
-  selectedVM: V1VirtualMachine | null,
+  selectedVM: null | V1VirtualMachine,
 ): VMConfiguration => {
   const currentVMName = getName(currentVM);
   const currentVMNamespace = getNamespace(currentVM);

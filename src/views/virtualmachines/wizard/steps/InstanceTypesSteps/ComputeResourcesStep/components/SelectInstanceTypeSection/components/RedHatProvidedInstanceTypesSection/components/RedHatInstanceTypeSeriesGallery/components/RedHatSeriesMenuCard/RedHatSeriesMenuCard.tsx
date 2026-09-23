@@ -13,8 +13,7 @@ import {
 import { useKubevirtTranslation } from '@kubevirt-utils/hooks/useKubevirtTranslation';
 import { type InstanceTypeSeries } from '@kubevirt-utils/resources/instancetype/types';
 import { Card, CardBody, CardHeader, Flex, Tooltip } from '@patternfly/react-core';
-import { useVMWizard } from '@virtualmachines/wizard/state/vm-wizard-context/VMWizardContext';
-import { CREATE_VM_FORM_FIELDS_INSTANCE_TYPE_DATA } from '@virtualmachines/wizard/state/vm-wizard-form/consts';
+import { useVMWizardForm } from '@virtualmachines/wizard/form/VMWizardFormProvider';
 import MarkdownTooltipContent from '@virtualmachines/wizard/steps/InstanceTypesSteps/ComputeResourcesStep/components/SelectInstanceTypeSection/components/RedHatProvidedInstanceTypesSection/components/RedHatInstanceTypeSeriesGallery/components/RedHatSeriesMenuCard/MarkdownTooltipContent';
 
 import './RedHatSeriesMenuCard.scss';
@@ -26,11 +25,9 @@ type RedHatSeriesMenuCardProps = {
 const RedHatSeriesMenuCard: FC<RedHatSeriesMenuCardProps> = ({ rhSeriesItem }) => {
   const { t } = useKubevirtTranslation();
 
-  const { control, setValue } = useVMWizard();
-  const selectedSeries = useWatch({
-    control,
-    name: CREATE_VM_FORM_FIELDS_INSTANCE_TYPE_DATA.SELECTED_SERIES,
-  }) as string;
+  const { control, setValue } = useVMWizardForm();
+  const compute = useWatch({ control, name: 'instanceType.compute' });
+  const selectedSeries = compute?.type === 'redhat' ? compute.series : '';
 
   const { classDisplayNameAnnotation, descriptionAnnotation, seriesName, sizes } = rhSeriesItem;
 
@@ -53,12 +50,17 @@ const RedHatSeriesMenuCard: FC<RedHatSeriesMenuCardProps> = ({ rhSeriesItem }) =
       ? sizes?.filter((size) => !is1GiInstanceType(size.sizeLabel))
       : sizes;
     const defaultSize = (standardSizes?.[0] ?? sizes?.[0])?.sizeLabel;
-    setValue(CREATE_VM_FORM_FIELDS_INSTANCE_TYPE_DATA.SELECTED_SERIES, seriesName);
-    setValue(CREATE_VM_FORM_FIELDS_INSTANCE_TYPE_DATA.SELECTED_SIZE, defaultSize);
-    setValue(CREATE_VM_FORM_FIELDS_INSTANCE_TYPE_DATA.SELECTED_INSTANCE_TYPE, {
-      name: defaultSize ? `${seriesName}.${defaultSize}` : seriesName,
-      namespace: null,
-    });
+    const size = defaultSize ?? '';
+    setValue(
+      'instanceType.compute',
+      {
+        name: size ? `${seriesName}.${size}` : seriesName,
+        series: seriesName,
+        size,
+        type: 'redhat',
+      },
+      { shouldValidate: true },
+    );
   };
 
   const card = (

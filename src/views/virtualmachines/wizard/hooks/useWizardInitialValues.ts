@@ -1,5 +1,6 @@
 import { useLocation } from 'react-router';
 
+import { DEFAULT_NAMESPACE } from '@kubevirt-utils/constants/constants';
 import useActiveNamespace from '@kubevirt-utils/hooks/useActiveNamespace';
 import useLocalStorage from '@kubevirt-utils/hooks/useLocalStorage';
 import { getValidNamespace } from '@kubevirt-utils/utils/utils';
@@ -18,6 +19,7 @@ type WizardLocationState = {
 type WizardInitialValues = {
   cluster: string;
   hubClusterError: unknown;
+  isACM: boolean;
   isLoadingHubCluster: boolean;
   namespace: string;
 };
@@ -36,7 +38,7 @@ const useWizardInitialValues = (): WizardInitialValues => {
   const isACM = useIsACMPage();
 
   const activeNamespace = isACM ? activeNamespaceFromUtil : activeNamespaceFromSDK;
-  const namespace = getValidNamespace(state?.namespace ?? activeNamespace);
+  const namespace = getValidNamespace(state?.namespace ?? activeNamespace) || DEFAULT_NAMESPACE;
 
   const [clusterFromLocalStorage] = useLocalStorage(SELECTED_CLUSTER.LOCAL_STORAGE_KEY);
 
@@ -50,6 +52,7 @@ const useWizardInitialValues = (): WizardInitialValues => {
   return {
     cluster,
     hubClusterError: isACM ? hubClusterError : undefined,
+    isACM,
     isLoadingHubCluster: isACM && !hubClusterLoaded,
     namespace,
   };

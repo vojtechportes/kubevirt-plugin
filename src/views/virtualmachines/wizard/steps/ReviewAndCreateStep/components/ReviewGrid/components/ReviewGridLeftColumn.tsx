@@ -1,5 +1,4 @@
 import { type FC } from 'react';
-import { useWatch } from 'react-hook-form';
 
 import DescriptionItem from '@kubevirt-utils/components/DescriptionItem/DescriptionItem';
 import { TREE_VIEW_FOLDERS } from '@kubevirt-utils/hooks/useFeatures/constants';
@@ -8,28 +7,21 @@ import { useKubevirtTranslation } from '@kubevirt-utils/hooks/useKubevirtTransla
 import { getFolder, NO_DATA_DASH } from '@kubevirt-utils/resources/vm';
 import { getCluster } from '@multicluster/helpers/selectors';
 import { DescriptionList, ExpandableSection } from '@patternfly/react-core';
-import { useVMWizard } from '@virtualmachines/wizard/state/vm-wizard-context/VMWizardContext';
-import {
-  CREATE_VM_FORM_FIELDS_CUSTOMIZED_VM,
-  CREATE_VM_FORM_FIELDS_VM_DATA,
-} from '@virtualmachines/wizard/state/vm-wizard-form/consts';
-import { isCloneCreationMethod } from '@virtualmachines/wizard/utils/utils';
+import { type WizardReviewModel } from '@virtualmachines/wizard/form/review';
 
 import CloneDescriptionInput from './CloneDescriptionInput';
 import CloneNameInput from './CloneNameInput';
 
-const ReviewGridLeftColumn: FC = () => {
+type ReviewGridLeftColumnProps = {
+  review: WizardReviewModel;
+};
+
+const ReviewGridLeftColumn: FC<ReviewGridLeftColumnProps> = ({ review }) => {
   const { t } = useKubevirtTranslation();
-  const { control } = useVMWizard();
-  const vm = useWatch({ control, name: CREATE_VM_FORM_FIELDS_CUSTOMIZED_VM });
+  const { configurationVM, isCloneMethod, target } = review;
 
   const { featureEnabled: treeViewFoldersEnabled, loading: treeViewFoldersLoading } =
     useFeatures(TREE_VIEW_FOLDERS);
-
-  const { getValues } = useVMWizard();
-  const { creationMethod, name, project } = getValues(CREATE_VM_FORM_FIELDS_VM_DATA.ROOT);
-
-  const isCloneMethod = isCloneCreationMethod(creationMethod);
 
   return (
     <ExpandableSection isExpanded isIndented toggleText={t('Details')}>
@@ -40,19 +32,22 @@ const ReviewGridLeftColumn: FC = () => {
             <CloneDescriptionInput />
           </>
         ) : (
-          <DescriptionItem descriptionData={name ?? NO_DATA_DASH} descriptionHeader={t('Name')} />
+          <DescriptionItem
+            descriptionData={target.name ?? NO_DATA_DASH}
+            descriptionHeader={t('Name')}
+          />
         )}
         <DescriptionItem
-          descriptionData={getCluster(vm) ?? NO_DATA_DASH}
+          descriptionData={getCluster(configurationVM) ?? NO_DATA_DASH}
           descriptionHeader={t('Cluster')}
         />
         <DescriptionItem
-          descriptionData={project ?? NO_DATA_DASH}
+          descriptionData={target.project ?? NO_DATA_DASH}
           descriptionHeader={t('Project')}
         />
         {!treeViewFoldersLoading && treeViewFoldersEnabled && (
           <DescriptionItem
-            descriptionData={getFolder(vm) ?? NO_DATA_DASH}
+            descriptionData={getFolder(configurationVM) ?? NO_DATA_DASH}
             descriptionHeader={t('Group')}
           />
         )}

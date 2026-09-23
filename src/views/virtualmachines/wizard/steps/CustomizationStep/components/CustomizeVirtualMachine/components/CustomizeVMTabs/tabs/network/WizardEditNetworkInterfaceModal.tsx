@@ -10,6 +10,7 @@ import {
 } from '@kubevirt-utils/components/NetworkInterfaceModal/utils/helpers';
 import { useKubevirtTranslation } from '@kubevirt-utils/hooks/useKubevirtTranslation';
 import { type NetworkPresentation } from '@kubevirt-utils/resources/vm/utils/network/constants';
+import { ensurePath } from '@kubevirt-utils/utils/utils';
 
 import { type UpdateVM } from './WizardNetworkInterfaceModal';
 
@@ -55,13 +56,15 @@ const WizardEditNetworkInterfaceModal: FC<WizardEditNetworkInterfaceModalProps> 
       });
 
       const networkProducer = produceVMNetworks(currentVM, (draftVM) => {
+        ensurePath(draftVM, ['spec.template.spec.domain.devices']);
+
         draftVM.spec.template.spec.domain.devices.interfaces = [
-          ...(draftVM.spec.template.spec.domain.devices.interfaces.filter(filterByNicName) ?? []),
+          ...(draftVM.spec.template.spec.domain.devices.interfaces ?? []).filter(filterByNicName),
           resultInterface,
         ];
 
         draftVM.spec.template.spec.networks = [
-          ...(draftVM.spec.template.spec.networks.filter(filterByNicName) ?? []),
+          ...(draftVM.spec.template.spec.networks ?? []).filter(filterByNicName),
           resultNetwork,
         ];
       });

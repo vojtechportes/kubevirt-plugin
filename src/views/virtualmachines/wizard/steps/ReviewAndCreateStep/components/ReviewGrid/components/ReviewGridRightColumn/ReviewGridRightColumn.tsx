@@ -1,6 +1,6 @@
 import type { FC } from 'react';
-import { useWatch } from 'react-hook-form';
 
+import { type V1VirtualMachine } from '@kubevirt-ui-ext/kubevirt-api/kubevirt';
 import DisksReviewTable from '@kubevirt-utils/components/DisksReviewTable/DisksReviewTable';
 import NetworksReviewTable from '@kubevirt-utils/components/NetworksReviewTable/NetworksReviewTable';
 import { useKubevirtTranslation } from '@kubevirt-utils/hooks/useKubevirtTranslation';
@@ -8,15 +8,15 @@ import { getInterfaces, getNetworks } from '@kubevirt-utils/resources/vm';
 import { ExpandableSection, Stack, StackItem } from '@patternfly/react-core';
 import useWizardDisksTableData from '@virtualmachines/wizard/components/DisksReviewTable/hooks/useWizardDisksTableData/useWizardDisksTableData';
 import HardwareDevicesTable from '@virtualmachines/wizard/components/HardwareDevicesTable';
-import { useVMWizard } from '@virtualmachines/wizard/state/vm-wizard-context/VMWizardContext';
-import { CREATE_VM_FORM_FIELDS_CUSTOMIZED_VM } from '@virtualmachines/wizard/state/vm-wizard-form/consts';
 
 import './ReviewGridRightColumn.scss';
 
-const ReviewGridRightColumn: FC = () => {
+type ReviewGridRightColumnProps = {
+  vm: null | V1VirtualMachine;
+};
+
+const ReviewGridRightColumn: FC<ReviewGridRightColumnProps> = ({ vm }) => {
   const { t } = useKubevirtTranslation();
-  const { control } = useVMWizard();
-  const vm = useWatch({ control, name: CREATE_VM_FORM_FIELDS_CUSTOMIZED_VM });
 
   const [disks] = useWizardDisksTableData(vm);
   const interfaces = getInterfaces(vm);
@@ -36,7 +36,7 @@ const ReviewGridRightColumn: FC = () => {
       </StackItem>
       <StackItem>
         <ExpandableSection isIndented toggleText={t('Hardware devices')}>
-          <HardwareDevicesTable />
+          <HardwareDevicesTable vm={vm} />
         </ExpandableSection>
       </StackItem>
     </Stack>

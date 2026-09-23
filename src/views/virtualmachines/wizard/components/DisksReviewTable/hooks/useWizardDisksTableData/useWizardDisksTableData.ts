@@ -14,7 +14,7 @@ import useK8sWatchData from '@multicluster/hooks/useK8sWatchData';
 import { mapDiskDevicesToRows, resolveDiskDevices } from './utils/utils';
 
 type UseDisksTableDisks = (
-  vm: V1VirtualMachine,
+  vm: null | V1VirtualMachine,
   pvcNamespace?: string,
 ) => [DiskRowDataLayout[], boolean, Error | null];
 

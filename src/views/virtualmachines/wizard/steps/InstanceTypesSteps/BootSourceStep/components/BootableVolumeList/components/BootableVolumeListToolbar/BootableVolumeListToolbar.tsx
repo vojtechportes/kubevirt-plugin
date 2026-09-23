@@ -14,8 +14,7 @@ import { type PaginationState } from '@kubevirt-utils/hooks/usePagination/utils/
 import { type BootableVolume } from '@kubevirt-utils/resources/bootableresources/types';
 import { type ColumnLayout } from '@openshift-console/dynamic-plugin-sdk';
 import { FormGroup, Split, SplitItem } from '@patternfly/react-core';
-import { useVMWizard } from '@virtualmachines/wizard/state/vm-wizard-context/VMWizardContext';
-import { CREATE_VM_FORM_FIELDS_INSTANCE_TYPE_DATA } from '@virtualmachines/wizard/state/vm-wizard-form/consts';
+import { useVMWizardForm } from '@virtualmachines/wizard/form/VMWizardFormProvider';
 
 import BootableVolumeListPagination from '../BootableVolumeListPagination/BootableVolumeListPagination';
 
@@ -52,7 +51,7 @@ const BootableVolumeListToolbar: FC<BootableVolumeListToolbarProps> = ({
 }) => {
   const { t } = useKubevirtTranslation();
   const isAdmin = useIsAdmin();
-  const { control } = useVMWizard();
+  const { control } = useVMWizardForm();
 
   return (
     <Split hasGutter>
@@ -63,7 +62,7 @@ const BootableVolumeListToolbar: FC<BootableVolumeListToolbarProps> = ({
         >
           <Controller
             control={control}
-            name={CREATE_VM_FORM_FIELDS_INSTANCE_TYPE_DATA.VOLUME_LIST_NAMESPACE}
+            name="instanceType.volumeNamespace"
             render={({ field: { onChange, ref: _ref } }) => (
               <ProjectDropdown
                 includeAllProjects={isAdmin}

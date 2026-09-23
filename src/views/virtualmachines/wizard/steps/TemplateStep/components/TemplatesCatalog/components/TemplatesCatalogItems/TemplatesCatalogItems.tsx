@@ -46,6 +46,7 @@ const TemplatesCatalogItems: FC<TemplatesCatalogItemsProps> = ({
         clusterPreferencesByName={clusterPreferencesByName}
         loaded={loaded}
         onTemplateClick={onTemplateClick}
+        selectedTemplate={selectedTemplate}
         templates={sortedTemplates}
       />
     </div>

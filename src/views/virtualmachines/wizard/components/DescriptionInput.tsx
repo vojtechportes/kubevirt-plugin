@@ -4,20 +4,24 @@ import { Controller } from 'react-hook-form';
 import { Button, InputGroup, InputGroupItem, TextInput } from '@patternfly/react-core';
 import { SyncAltIcon } from '@patternfly/react-icons';
 
-import { useVMWizard } from '../state/vm-wizard-context/VMWizardContext';
-import { CREATE_VM_FORM_FIELDS_VM_DATA } from '../state/vm-wizard-form/consts';
+import { useVMWizardForm } from '../form/VMWizardFormProvider';
 
 const DescriptionInput: FC = () => {
-  const { control } = useVMWizard();
+  const { control } = useVMWizardForm();
 
   return (
     <InputGroup>
       <InputGroupItem isFill>
         <Controller
           control={control}
-          name={CREATE_VM_FORM_FIELDS_VM_DATA.DESCRIPTION}
+          name="deployment.description"
           render={({ field: { ref: _ref, ...field } }) => (
-            <TextInput id="vm-description" type="text" {...field} />
+            <TextInput
+              id="vm-description"
+              type="text"
+              {...field}
+              onChange={(_event, value) => field.onChange(value)}
+            />
           )}
         />
       </InputGroupItem>

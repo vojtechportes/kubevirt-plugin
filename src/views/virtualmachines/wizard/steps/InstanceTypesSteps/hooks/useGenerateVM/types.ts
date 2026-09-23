@@ -1,10 +1,7 @@
-import { type UseFormGetValues } from 'react-hook-form';
-
 import { type V1VirtualMachine } from '@kubevirt-ui-ext/kubevirt-api/kubevirt';
 import { type BootableVolume } from '@kubevirt-utils/resources/bootableresources/types';
 import { type NetworkAttachmentDefinitionKind } from '@kubevirt-utils/resources/nad/types';
-import { type UseApplyAutoLabelsResult } from '@virtualmachines/wizard/hooks/useApplyAutoLabels';
-import { type VMWizardFormValues } from '@virtualmachines/wizard/state/vm-wizard-form/types';
+import { type VMWizardFormValues } from '@virtualmachines/wizard/form/types';
 
 export type GenerateVMContext = {
   enableMultiArchBootImageImport?: boolean;
@@ -17,18 +14,16 @@ export type GenerateVMContext = {
 };
 
 export type GenerateVMArgs = {
-  autoAppliedLabels: UseApplyAutoLabelsResult;
   context: GenerateVMContext;
-  getValues: UseFormGetValues<VMWizardFormValues>;
-  instanceTypeData: VMWizardFormValues['instanceTypeData'];
-  vmData: VMWizardFormValues['vmData'];
+  instanceTypeData: VMWizardFormValues['instanceType'];
+  vmData: VMWizardFormValues['deployment'];
 };
 
 export type GenerateVMCallback = (props: GenerateVMArgs) => V1VirtualMachine;
 
 export type GenerateVMSpecConfiguration = {
   context: Omit<GenerateVMContext, 'sshSecretName'>;
-  instanceTypeData: VMWizardFormValues['instanceTypeData'];
+  instanceTypeData: VMWizardFormValues['instanceType'];
 };
 
 export type GenerateVMSpecTemplateConfiguration = {
@@ -47,9 +42,11 @@ export type GenerateVMSpecTemplateConfiguration = {
 
 export type GenerateVMSpecDataVolumeTemplates = {
   customDiskSize: string | undefined;
-  dvSource: VMWizardFormValues['instanceTypeData']['dvSource'];
+  dvSource: NonNullable<VMWizardFormValues['instanceType']['bootVolume']>['dataVolumeSource'];
   isIso: boolean;
-  pvcSource: VMWizardFormValues['instanceTypeData']['pvcSource'];
+  pvcSource: NonNullable<
+    VMWizardFormValues['instanceType']['bootVolume']
+  >['persistentVolumeClaimSource'];
   selectedBootableVolume: BootableVolume;
   storageClassName: string;
   vmName: string;

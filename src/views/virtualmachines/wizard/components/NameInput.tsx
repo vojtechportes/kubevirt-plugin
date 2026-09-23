@@ -1,62 +1,73 @@
 import { type FC, useCallback } from 'react';
-import { Controller, useWatch } from 'react-hook-form';
+import { useController } from 'react-hook-form';
 
 import FormGroupHelperText from '@kubevirt-utils/components/FormGroupHelperText/FormGroupHelperText';
 import { useKubevirtTranslation } from '@kubevirt-utils/hooks/useKubevirtTranslation';
 import { useNameValidation } from '@kubevirt-utils/hooks/useNameValidation';
-import {
-  getDNS1123LabelError,
-  getDNS1123LabelErrorLenient,
-} from '@kubevirt-utils/utils/validation';
-import { InputGroup, InputGroupItem, TextInput } from '@patternfly/react-core';
+import { getDNS1123LabelErrorLenient } from '@kubevirt-utils/utils/validation';
+import { InputGroup, InputGroupItem, TextInput, ValidatedOptions } from '@patternfly/react-core';
+import { useVMWizardState } from '@virtualmachines/wizard/state/useVMWizardState';
 
-import { useVMWizard } from '../state/vm-wizard-context/VMWizardContext';
-import {
-  CREATE_VM_FORM_FIELDS_UI_STATE,
-  CREATE_VM_FORM_FIELDS_VM_DATA,
-} from '../state/vm-wizard-form/consts';
+import { useVMWizardForm } from '../form/VMWizardFormProvider';
 import GenerateVMNameButton from './GenerateVMNameButton';
 
 const NameInput: FC = () => {
   const { t } = useKubevirtTranslation();
-  const { control, setValue } = useVMWizard();
-  const vmName = useWatch({ control, name: CREATE_VM_FORM_FIELDS_VM_DATA.NAME });
-  const shouldCheckVMNameProperly = useWatch({
-    control,
-    name: CREATE_VM_FORM_FIELDS_UI_STATE.SHOULD_CHECK_VM_NAME_PROPERLY,
-  });
-  const getError = shouldCheckVMNameProperly ? getDNS1123LabelError : getDNS1123LabelErrorLenient;
-  const { errorText, validated } = useNameValidation({ getError, name: vmName });
+  const { control, setValue, trigger } = useVMWizardForm();
+  const {
+    field,
+    fieldState: { error, isTouched },
+  } = useController({ control, name: 'deployment.name' });
+  const vmName = field.value;
+  const { setStrictVMName, strictVMName } = useVMWizardState();
+  const showValidation = isTouched || Boolean(vmName) || strictVMName;
 
-  const applyName = useCallback(
+  const lenientValidation = useNameValidation({
+    getError: getDNS1123LabelErrorLenient,
+    name: showValidation ? vmName : undefined,
+  });
+
+  let errorText = lenientValidation.errorText;
+  let validated = lenientValidation.validated;
+
+  if (strictVMName) {
+    errorText = error?.message;
+    validated = error ? ValidatedOptions.error : ValidatedOptions.default;
+  }
+
+  const onChange = useCallback(
     (newName: string) => {
-      setValue(CREATE_VM_FORM_FIELDS_UI_STATE.SHOULD_CHECK_VM_NAME_PROPERLY, false);
-      setValue(CREATE_VM_FORM_FIELDS_VM_DATA.NAME, newName);
+      setStrictVMName(false);
+      // Keep errors visible after typing and clearing, even when the value is no longer dirty.
+      setValue('deployment.name', newName, {
+        shouldDirty: true,
+        shouldTouch: true,
+        shouldValidate: true,
+      });
     },
-    [setValue],
+    [setStrictVMName, setValue],
   );
 
   return (
     <>
       <InputGroup>
         <InputGroupItem isFill>
-          <Controller
-            control={control}
-            name={CREATE_VM_FORM_FIELDS_VM_DATA.NAME}
-            render={({ field: { ref: _ref, ...field } }) => (
-              <TextInput
-                id="vm-name"
-                {...field}
-                onChange={(_event, value) => applyName(value)}
-                placeholder={t('Enter a name or click the refresh icon to generate one')}
-                type="text"
-                validated={validated}
-              />
-            )}
+          <TextInput
+            id="vm-name"
+            {...field}
+            onBlur={() => {
+              field.onBlur();
+              setStrictVMName(true);
+              void trigger('deployment.name');
+            }}
+            onChange={(_event, value) => onChange(value)}
+            placeholder={t('Enter a name or click the refresh icon to generate one')}
+            type="text"
+            validated={validated}
           />
         </InputGroupItem>
         <InputGroupItem>
-          <GenerateVMNameButton applyName={applyName} />
+          <GenerateVMNameButton applyName={onChange} />
         </InputGroupItem>
       </InputGroup>
       {errorText && <FormGroupHelperText validated={validated}>{errorText}</FormGroupHelperText>}

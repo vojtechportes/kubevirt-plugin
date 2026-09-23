@@ -15,11 +15,7 @@ import {
   Title,
   TitleSizes,
 } from '@patternfly/react-core';
-import { useVMWizard } from '@virtualmachines/wizard/state/vm-wizard-context/VMWizardContext';
-import {
-  CREATE_VM_FORM_FIELDS_INSTANCE_TYPE_DATA,
-  CREATE_VM_FORM_FIELDS_VM_DATA,
-} from '@virtualmachines/wizard/state/vm-wizard-form/consts';
+import { useVMWizardForm } from '@virtualmachines/wizard/form/VMWizardFormProvider';
 import BootableVolumeList from '@virtualmachines/wizard/steps/InstanceTypesSteps/BootSourceStep/components/BootableVolumeList/BootableVolumeList';
 
 import AddBootableVolumeButton from './components/AddBootableVolumeButton';
@@ -28,20 +24,17 @@ import { getEffectiveVolumeNamespace } from './components/BootableVolumeList/uti
 const BootSourceStep: FC = () => {
   const { t } = useKubevirtTranslation();
   const isAdmin = useIsAdmin();
-  const { control } = useVMWizard();
-  const [cluster, project] = useWatch({
+  const { control } = useVMWizardForm();
+  const [cluster, project, volumeListNamespace] = useWatch({
     control,
-    name: [CREATE_VM_FORM_FIELDS_VM_DATA.CLUSTER, CREATE_VM_FORM_FIELDS_VM_DATA.PROJECT],
-  });
-  const volumeListNamespace = useWatch({
-    control,
-    name: CREATE_VM_FORM_FIELDS_INSTANCE_TYPE_DATA.VOLUME_LIST_NAMESPACE,
+    name: ['deployment.cluster', 'deployment.project', 'instanceType.volumeNamespace'],
   });
   const {
     field: { onChange, value },
   } = useController({
     control,
-    name: CREATE_VM_FORM_FIELDS_INSTANCE_TYPE_DATA.USE_BOOT_SOURCE,
+    name: 'instanceType.useBootSource',
+    rules: { deps: 'instanceType.bootVolume' },
   });
   const instanceTypesAndPreferencesData = useInstanceTypesAndPreferences(
     getValidNamespace(project),
@@ -69,7 +62,10 @@ const BootSourceStep: FC = () => {
               isChecked={value}
               label={t('Boot volume')}
               name="boot-volume"
-              onChange={() => onChange(true)}
+              onChange={() => {
+                if (value) return;
+                onChange(true);
+              }}
             />
           </SplitItem>
           <SplitItem isFilled />
@@ -91,7 +87,10 @@ const BootSourceStep: FC = () => {
           isChecked={!value}
           label={t('No boot source')}
           name="boot-volume"
-          onChange={() => onChange(false)}
+          onChange={() => {
+            if (!value) return;
+            onChange(false);
+          }}
         />
       </StackItem>
     </Stack>

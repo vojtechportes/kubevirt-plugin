@@ -2,45 +2,37 @@ import { type FC } from 'react';
 import { useWatch } from 'react-hook-form';
 
 import { Flex, FlexItem } from '@patternfly/react-core';
-import { useVMWizard } from '@virtualmachines/wizard/state/vm-wizard-context/VMWizardContext';
-import {
-  CREATE_VM_FORM_FIELDS_VM_DATA,
-  createInitialVMWizardFormValues,
-} from '@virtualmachines/wizard/state/vm-wizard-form/consts';
-import { type VMWizardVirtualMachineData } from '@virtualmachines/wizard/state/vm-wizard-form/types';
+import { resetCreationMethodValues } from '@virtualmachines/wizard/form/defaultValues';
+import { useVMWizardForm } from '@virtualmachines/wizard/form/VMWizardFormProvider';
+import { useVMWizardState } from '@virtualmachines/wizard/state/useVMWizardState';
 import { VMCreationMethod } from '@virtualmachines/wizard/utils/constants';
-import { clearVMPendingUploadsAndSignal } from '@virtualmachines/wizard/utils/utils';
+import { cancelWizardPendingUploads } from '@virtualmachines/wizard/utils/utils';
 
 import CreationMethodTile from './components/CreationMethodTile/CreationMethodTile';
 
 import './CreationMethodTileGroup.scss';
 
 const CreationMethodTileGroup: FC = () => {
-  const { control, getValues, reset } = useVMWizard();
+  const { control, getValues, reset } = useVMWizardForm();
+  const { resetNavigation } = useVMWizardState();
+
   const creationMethod: VMCreationMethod = useWatch({
     control,
-    name: CREATE_VM_FORM_FIELDS_VM_DATA.CREATION_METHOD,
+    name: 'creationMethod',
   });
 
-  const handleCreationMethodChange = (selectedCreationMethod: VMCreationMethod): void => {
-    if (selectedCreationMethod === creationMethod) {
-      return;
-    }
+  const changeCreationMethod = (method: VMCreationMethod): void => {
+    if (creationMethod === method) return;
 
-    const { cluster, description, folder, name, project }: Partial<VMWizardVirtualMachineData> =
-      getValues(CREATE_VM_FORM_FIELDS_VM_DATA.ROOT);
+    const values = getValues();
 
-    clearVMPendingUploadsAndSignal();
-    reset(
-      createInitialVMWizardFormValues({
-        cluster,
-        creationMethod: selectedCreationMethod,
-        description,
-        folder,
-        name,
-        project,
-      }),
+    cancelWizardPendingUploads(
+      values.customization.vmDraft,
+      values.customization.pendingBootableVolumeUploadKeys,
     );
+
+    reset(resetCreationMethodValues(values, method));
+    resetNavigation();
   };
 
   return (
@@ -56,7 +48,7 @@ const CreationMethodTileGroup: FC = () => {
             <CreationMethodTile
               creationMethod={method}
               isChecked={creationMethod === method}
-              setSelectedCreationMethod={handleCreationMethodChange}
+              setSelectedCreationMethod={changeCreationMethod}
             />
           </FlexItem>
         ),

@@ -72,7 +72,12 @@ describe('submitCDROM - upload volume wiring', () => {
       isHotPluggable: true,
     });
 
-    expect(createEjectMountedDiskCancelCleanup).toHaveBeenCalledWith(baseVM, 'cdrom-1');
+    expect(createEjectMountedDiskCancelCleanup).toHaveBeenCalledWith(
+      baseVM,
+      'cdrom-1',
+      undefined,
+      onSubmit,
+    );
     expect(createDetachDiskCancelCleanup).not.toHaveBeenCalled();
   });
 
@@ -82,7 +87,12 @@ describe('submitCDROM - upload volume wiring', () => {
       isHotPluggable: false,
     });
 
-    expect(createDetachDiskCancelCleanup).toHaveBeenCalledWith(baseVM, 'cdrom-1');
+    expect(createDetachDiskCancelCleanup).toHaveBeenCalledWith(
+      baseVM,
+      'cdrom-1',
+      undefined,
+      onSubmit,
+    );
     expect(createEjectMountedDiskCancelCleanup).not.toHaveBeenCalled();
   });
 

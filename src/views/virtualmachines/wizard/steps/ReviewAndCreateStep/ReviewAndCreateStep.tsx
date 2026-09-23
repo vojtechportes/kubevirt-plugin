@@ -1,5 +1,6 @@
 import { type FC } from 'react';
 import { useWatch } from 'react-hook-form';
+import produce from 'immer';
 
 import { useRunStrategyToggle } from '@kubevirt-utils/components/RunStrategyModal/useRunStrategyToggle';
 import {
@@ -7,24 +8,25 @@ import {
   START_AFTER_CREATION_CHECKBOX_ID,
 } from '@kubevirt-utils/components/RunStrategyModal/utils';
 import { useKubevirtTranslation } from '@kubevirt-utils/hooks/useKubevirtTranslation';
+import { ensurePath } from '@kubevirt-utils/utils/utils';
 import { Checkbox, Stack, StackItem, Title, TitleSizes } from '@patternfly/react-core';
-import { useVMWizard } from '@virtualmachines/wizard/state/vm-wizard-context/VMWizardContext';
-import {
-  CREATE_VM_FORM_FIELDS_CUSTOMIZED_VM,
-  CREATE_VM_FORM_FIELDS_VM_DATA,
-} from '@virtualmachines/wizard/state/vm-wizard-form/consts';
+import { useVMWizardForm } from '@virtualmachines/wizard/form/VMWizardFormProvider';
 import ReviewGrid from '@virtualmachines/wizard/steps/ReviewAndCreateStep/components/ReviewGrid/ReviewGrid';
-import { patchWizardCustomizedVM } from '@virtualmachines/wizard/utils/patchWizardCustomizedVM';
 import { isCloneCreationMethod } from '@virtualmachines/wizard/utils/utils';
 
 const ReviewAndCreateStep: FC = () => {
   const { t } = useKubevirtTranslation();
-  const { control, getValues, setValue } = useVMWizard();
-  const creationMethod = useWatch({ control, name: CREATE_VM_FORM_FIELDS_VM_DATA.CREATION_METHOD });
-  const vm = useWatch({ control, name: CREATE_VM_FORM_FIELDS_CUSTOMIZED_VM });
+  const { control, getValues, setValue } = useVMWizardForm();
+  const [creationMethod, sourceVM, vmDraft] = useWatch({
+    control,
+    name: ['creationMethod', 'clone.sourceVM', 'customization.vmDraft'],
+  });
   const isCloneMethod = isCloneCreationMethod(creationMethod);
 
-  const { isStartChecked, onToggle } = useRunStrategyToggle(vm ?? undefined);
+  const configurationVM = isCloneMethod ? sourceVM : vmDraft;
+
+  const { isStartChecked, onToggle } = useRunStrategyToggle(configurationVM ?? undefined);
+
   return (
     <Stack hasGutter>
       <StackItem>
@@ -50,8 +52,17 @@ const ReviewAndCreateStep: FC = () => {
           label={getStartAfterCreationLabel(t)}
           onChange={(_event, checked: boolean) => {
             const { newStrategy } = onToggle(checked);
-            const runStrategyPatch = [{ data: newStrategy, path: 'spec.runStrategy' }];
-            patchWizardCustomizedVM(getValues, setValue, runStrategyPatch);
+            const path = isCloneMethod ? 'clone.sourceVM' : 'customization.vmDraft';
+            const currentVM = getValues(path);
+            if (!currentVM) return;
+            setValue(
+              path,
+              produce(currentVM, (draft) => {
+                ensurePath(draft, 'spec');
+                draft.spec.runStrategy = newStrategy;
+              }),
+              { shouldValidate: true },
+            );
           }}
         />
       </StackItem>

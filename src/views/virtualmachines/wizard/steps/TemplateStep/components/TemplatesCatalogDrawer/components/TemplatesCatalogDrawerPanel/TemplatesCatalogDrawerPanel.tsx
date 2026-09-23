@@ -1,13 +1,11 @@
 import { type FC, memo, useCallback, useEffect, useState } from 'react';
-import { useWatch } from 'react-hook-form';
 
 import { useKubevirtTranslation } from '@kubevirt-utils/hooks/useKubevirtTranslation';
 import { getResourceKey } from '@kubevirt-utils/resources/shared';
 import { getParameters } from '@kubevirt-utils/resources/template';
 import { isEmpty } from '@kubevirt-utils/utils/utils';
 import { Alert, AlertVariant, Spinner, Tab, Tabs, TabTitleText } from '@patternfly/react-core';
-import { useVMWizard } from '@virtualmachines/wizard/state/vm-wizard-context/VMWizardContext';
-import { CREATE_VM_FORM_FIELDS_UI_STATE } from '@virtualmachines/wizard/state/vm-wizard-form/consts';
+import { useVMWizardState } from '@virtualmachines/wizard/state/useVMWizardState';
 import { TemplatesDrawerTabKey } from '@virtualmachines/wizard/steps/TemplateStep/components/TemplatesCatalogDrawer/components/TemplatesCatalogDrawerPanel/utils/types';
 import { useDrawerContext } from '@virtualmachines/wizard/steps/TemplateStep/components/TemplatesCatalogDrawer/hooks/useDrawerContext';
 import {
@@ -18,13 +16,9 @@ import {
 import ParametersSections from '../ParametersSections';
 import TemplateInfoSection from '../TemplateInfoSection';
 
-const TemplatesCatalogDrawerPanel: FC = memo(() => {
+const TemplatesCatalogDrawerPanel: FC = () => {
+  const { setTemplateProcessError, templateProcessError } = useVMWizardState();
   const { t } = useKubevirtTranslation();
-  const { control } = useVMWizard();
-  const templateProcessError = useWatch({
-    control,
-    name: CREATE_VM_FORM_FIELDS_UI_STATE.TEMPLATE_PROCESS_ERROR,
-  });
   const [activeTabKey, setActiveTabKey] = useState<TemplatesDrawerTabKey>(
     TemplatesDrawerTabKey.Details,
   );
@@ -89,7 +83,8 @@ const TemplatesCatalogDrawerPanel: FC = memo(() => {
             title={<TabTitleText>{t('Required parameters')}</TabTitleText>}
           >
             <ParametersSections
-              requiredParameters={requiredParameters}
+              key={templateKey}
+              onCommit={() => setTemplateProcessError(null)}
               showValidation={Boolean(templateProcessError)}
             />
           </Tab>
@@ -97,6 +92,6 @@ const TemplatesCatalogDrawerPanel: FC = memo(() => {
       </Tabs>
     </>
   );
-});
+};
 
-export default TemplatesCatalogDrawerPanel;
+export default memo(TemplatesCatalogDrawerPanel);

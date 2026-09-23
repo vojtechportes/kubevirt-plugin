@@ -1,10 +1,5 @@
-import { type UseFormGetValues } from 'react-hook-form';
-
 import { VirtualMachineModel } from '@kubevirt-ui-ext/kubevirt-api/console';
-import {
-  type K8sIoApimachineryPkgApisMetaV1ObjectMeta,
-  type V1VirtualMachine,
-} from '@kubevirt-ui-ext/kubevirt-api/kubevirt';
+import { type V1VirtualMachine } from '@kubevirt-ui-ext/kubevirt-api/kubevirt';
 import {
   addDNFUpdateToRunCMD,
   addSubscriptionManagerToRunCMD,
@@ -23,38 +18,27 @@ import { OS_WINDOWS_PREFIX } from '@kubevirt-utils/resources/vm/utils/operation-
 import { getRandomChars, isEmpty } from '@kubevirt-utils/utils/utils';
 import { AutomaticSubscriptionTypeEnum } from '@settings/tabs/ClusterTab/components/GuestManagmentSection/AutomaticSubscriptionRHELGuests/components/AutomaticSubscriptionType/utils/utils';
 import { VM_FOLDER_LABEL } from '@virtualmachines/tree/utils/constants';
-import { type GetMergedMetadataLabelsArgs } from '@virtualmachines/wizard/hooks/types/types';
-import { CREATE_VM_FORM_FIELDS_CUSTOMIZED_VM } from '@virtualmachines/wizard/state/vm-wizard-form/consts';
-import { type VMWizardFormValues } from '@virtualmachines/wizard/state/vm-wizard-form/types';
 
 import { type GenerateVMCallback } from '../types';
 
 import { getSpecConfiguration } from './generateVMSpecConfig';
 
-export const generateVM: GenerateVMCallback = ({
-  autoAppliedLabels,
-  context,
-  getValues,
-  instanceTypeData,
-  vmData,
-}) => {
+export const generateVM: GenerateVMCallback = ({ context, instanceTypeData, vmData }) => {
   const { cluster, description, folder, project } = vmData;
-  const { selectedBootableVolume } = instanceTypeData;
-  const { adminLabels, userDefaults } = autoAppliedLabels;
+  const selectedBootableVolume = instanceTypeData.bootVolume?.volume ?? null;
 
   const generatedVM: V1VirtualMachine = {
     apiVersion: `${VirtualMachineModel.apiGroup}/${VirtualMachineModel.apiVersion}`,
     kind: VirtualMachineModel.kind,
     ...(cluster && { cluster }),
-    metadata: getMergedMetadataLabels({
-      adminLabels,
-      description,
-      folder,
-      getValues,
-      project,
-      userDefaults,
-      vmName: context.vmName,
-    }),
+    metadata: {
+      ...(description && { annotations: { description } }),
+      labels: {
+        ...(folder && { [VM_FOLDER_LABEL]: folder }),
+      },
+      name: context.vmName,
+      namespace: project,
+    },
     spec: getSpecConfiguration({
       context,
       instanceTypeData,
@@ -115,13 +99,12 @@ export const createPopulatedCloudInitYAML = (
 };
 
 export const getAdminLabelsToMerge = (
-  adminLabels: AutoAppliedLabel[],
+  adminLabels: readonly AutoAppliedLabel[],
   userDefaults: Record<string, string>,
-  getValues: UseFormGetValues<VMWizardFormValues>,
+  vmDraft: V1VirtualMachine | null,
 ): Record<string, string> => {
-  const customizedVM = getValues(CREATE_VM_FORM_FIELDS_CUSTOMIZED_VM);
-  const existingLabels = customizedVM ? getLabels(customizedVM, {}) : {};
-  const adminLabelsToMerge = adminLabels?.reduce<Record<string, string>>((acc, { key, value }) => {
+  const existingLabels = vmDraft ? getLabels(vmDraft, {}) : {};
+  const adminLabelsToMerge = adminLabels.reduce<Record<string, string>>((acc, { key, value }) => {
     if (Object.prototype.hasOwnProperty.call(existingLabels, key)) {
       return acc;
     }
@@ -131,30 +114,4 @@ export const getAdminLabelsToMerge = (
   }, {});
 
   return { ...adminLabelsToMerge, ...existingLabels };
-};
-export const getMergedMetadataLabels = ({
-  adminLabels,
-  description,
-  folder,
-  getValues,
-  project,
-  userDefaults,
-  vmName,
-}: GetMergedMetadataLabelsArgs): K8sIoApimachineryPkgApisMetaV1ObjectMeta => {
-  const adminLabelsToMerge = getAdminLabelsToMerge(adminLabels, userDefaults, getValues);
-
-  const metadataLabels = {
-    labels: {
-      ...(folder && { [VM_FOLDER_LABEL]: folder }),
-      ...(adminLabelsToMerge ?? {}),
-    },
-  };
-
-  const metadata = {
-    ...(description && { annotations: { description } }),
-    name: vmName,
-    namespace: project,
-  };
-
-  return { ...metadata, ...metadataLabels };
 };

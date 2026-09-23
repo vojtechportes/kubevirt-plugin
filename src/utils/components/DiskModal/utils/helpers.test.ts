@@ -1,8 +1,4 @@
 import type { V1VirtualMachine } from '@kubevirt-ui-ext/kubevirt-api/kubevirt';
-import {
-  getCustomizeWizardVM,
-  updateVMCustomizeIT,
-} from '@kubevirt-utils/signals/customizeWizardVMSignal';
 import { kubevirtK8sGet } from '@multicluster/k8sRequests';
 import { updateDisks } from '@virtualmachines/details/tabs/configuration/details/utils/utils';
 
@@ -18,11 +14,6 @@ jest.mock('@multicluster/k8sRequests', () => ({
 
 jest.mock('@virtualmachines/details/tabs/configuration/details/utils/utils', () => ({
   updateDisks: jest.fn(),
-}));
-
-jest.mock('@kubevirt-utils/signals/customizeWizardVMSignal', () => ({
-  getCustomizeWizardVM: jest.fn(),
-  updateVMCustomizeIT: jest.fn(),
 }));
 
 const vm = (name: string): V1VirtualMachine => ({ metadata: { name }, spec: { template: {} } });
@@ -67,12 +58,9 @@ describe('createEjectMountedDiskCancelCleanup / createDetachDiskCancelCleanup', 
 
   const mockKubevirtK8sGet = kubevirtK8sGet as jest.Mock;
   const mockUpdateDisks = updateDisks as jest.Mock;
-  const mockGetCustomizeWizardVM = getCustomizeWizardVM as jest.Mock;
-  const mockUpdateVMCustomizeIT = updateVMCustomizeIT as jest.Mock;
 
   beforeEach(() => {
     jest.clearAllMocks();
-    mockGetCustomizeWizardVM.mockReturnValue(null);
   });
 
   describe('without a wizard draft VM (persisted VM / details page)', () => {
@@ -85,34 +73,43 @@ describe('createEjectMountedDiskCancelCleanup / createDetachDiskCancelCleanup', 
 
       expect(mockKubevirtK8sGet).toHaveBeenCalledTimes(1);
       expect(mockUpdateDisks).toHaveBeenCalledTimes(1);
-      expect(mockUpdateVMCustomizeIT).not.toHaveBeenCalled();
       const patchedVM = mockUpdateDisks.mock.calls[0][0] as V1VirtualMachine;
       expect(patchedVM.spec.template.spec.volumes).toEqual([]);
     });
   });
 
   describe('with a wizard draft VM (in-memory customize instance type wizard)', () => {
-    it('transforms the live signal VM and patches it via updateVMCustomizeIT', async () => {
+    it('transforms the current draft VM and submits it through the provided callback', async () => {
       const draftVM = vmWithCdrom();
-      mockGetCustomizeWizardVM.mockReturnValue(draftVM);
+      const onSubmit = jest.fn(async (updatedVM: V1VirtualMachine) => updatedVM);
 
-      const cleanup = createEjectMountedDiskCancelCleanup(vmWithCdrom(), cdromName);
+      const cleanup = createEjectMountedDiskCancelCleanup(
+        vmWithCdrom(),
+        cdromName,
+        () => draftVM,
+        onSubmit,
+      );
       await cleanup();
 
       expect(mockKubevirtK8sGet).not.toHaveBeenCalled();
-      expect(mockUpdateVMCustomizeIT).toHaveBeenCalledTimes(1);
-      const patchedVM = mockUpdateVMCustomizeIT.mock.calls[0][0] as V1VirtualMachine;
+      expect(onSubmit).toHaveBeenCalledTimes(1);
+      const patchedVM = onSubmit.mock.calls[0][0] as V1VirtualMachine;
       expect(patchedVM.spec.template.spec.volumes).toEqual([]);
     });
 
     it('detaches (rather than ejects) the disk when using createDetachDiskCancelCleanup', async () => {
       const draftVM = vmWithCdrom();
-      mockGetCustomizeWizardVM.mockReturnValue(draftVM);
+      const onSubmit = jest.fn(async (updatedVM: V1VirtualMachine) => updatedVM);
 
-      const cleanup = createDetachDiskCancelCleanup(vmWithCdrom(), cdromName);
+      const cleanup = createDetachDiskCancelCleanup(
+        vmWithCdrom(),
+        cdromName,
+        () => draftVM,
+        onSubmit,
+      );
       await cleanup();
 
-      const patchedVM = mockUpdateVMCustomizeIT.mock.calls[0][0] as V1VirtualMachine;
+      const patchedVM = onSubmit.mock.calls[0][0] as V1VirtualMachine;
       expect(patchedVM.spec.template.spec.domain.devices.disks).toEqual([]);
       expect(patchedVM.spec.template.spec.volumes).toEqual([]);
     });

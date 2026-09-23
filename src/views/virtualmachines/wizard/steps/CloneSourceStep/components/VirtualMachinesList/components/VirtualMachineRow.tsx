@@ -8,11 +8,7 @@ import { getDescription } from '@kubevirt-utils/resources/shared';
 import { Radio } from '@patternfly/react-core';
 import { Td, Tr } from '@patternfly/react-table';
 import { type VMCallbacks } from '@virtualmachines/list/virtualMachinesDefinition';
-import { useVMWizard } from '@virtualmachines/wizard/state/vm-wizard-context/VMWizardContext';
-import {
-  CREATE_VM_FORM_FIELDS_CUSTOMIZED_VM,
-  CREATE_VM_FORM_FIELDS_VM_DATA,
-} from '@virtualmachines/wizard/state/vm-wizard-form/consts';
+import { useVMWizardForm } from '@virtualmachines/wizard/form/VMWizardFormProvider';
 
 import { getCloneSourceVMName, getVMConfiguration } from '../utils/utils';
 
@@ -23,15 +19,17 @@ type VirtualMachineRowProps = {
 };
 
 const VirtualMachineRow: FC<VirtualMachineRowProps> = ({ callbacks, columns, vm }) => {
-  const { control, setValue } = useVMWizard();
-  const selectedVM = useWatch({ control, name: CREATE_VM_FORM_FIELDS_CUSTOMIZED_VM });
+  const { control, setValue } = useVMWizardForm();
+  const selectedSource = useWatch({ control, name: 'clone.sourceVM' });
 
-  const { isRowSelected, rowId } = getVMConfiguration(vm, selectedVM);
+  const { isRowSelected, rowId } = getVMConfiguration(vm, selectedSource);
 
   const handleClick = (): void => {
-    setValue(CREATE_VM_FORM_FIELDS_VM_DATA.NAME, getCloneSourceVMName(vm));
-    setValue(CREATE_VM_FORM_FIELDS_VM_DATA.DESCRIPTION, getDescription(vm) ?? '');
-    setValue(CREATE_VM_FORM_FIELDS_CUSTOMIZED_VM, vm);
+    const options = { shouldDirty: true, shouldTouch: true, shouldValidate: true } as const;
+
+    setValue('clone.sourceVM', vm, options);
+    setValue('deployment.name', getCloneSourceVMName(vm), options);
+    setValue('deployment.description', getDescription(vm) ?? '', options);
   };
 
   return (

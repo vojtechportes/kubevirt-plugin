@@ -4,8 +4,7 @@ import { useWatch } from 'react-hook-form';
 import { useIsAdmin } from '@kubevirt-utils/hooks/useIsAdmin';
 import type { OnSetFilters } from '@kubevirt-utils/hooks/useKubevirtDataViewFilters/types';
 import { Card, Skeleton } from '@patternfly/react-core';
-import { useVMWizard } from '@virtualmachines/wizard/state/vm-wizard-context/VMWizardContext';
-import { CREATE_VM_FORM_FIELDS_INSTANCE_TYPE_DATA } from '@virtualmachines/wizard/state/vm-wizard-form/consts';
+import { useVMWizardForm } from '@virtualmachines/wizard/form/VMWizardFormProvider';
 import usePreferencesData from '@virtualmachines/wizard/steps/InstanceTypesSteps/BootSourceStep/components/BootableVolumeList/hooks/usePreferencesData';
 import type {
   UseBootableVolumesValues,
@@ -29,11 +28,11 @@ const BootableVolumeList: FC<BootableVolumeListProps> = ({
   bootableVolumesData,
   instanceTypesAndPreferencesData,
 }) => {
-  const { control } = useVMWizard();
+  const { control } = useVMWizardForm();
 
   const volumeListNamespace = useWatch({
     control,
-    name: CREATE_VM_FORM_FIELDS_INSTANCE_TYPE_DATA.VOLUME_LIST_NAMESPACE,
+    name: 'instanceType.volumeNamespace',
   });
 
   const isAdmin = useIsAdmin();
