@@ -62,6 +62,23 @@ async function selectRegistrySourceTypeInAddVolumeModal(
 export class BootableVolumesRowActionsComponent extends BaseComponent {
   private readonly _dialogModal = this.testId('dialog-modal');
 
+  /**
+   * Selector for the "Upload to registry" kebab action. BootableVolumeActionsCell
+   * renders one of two different components depending on the row's underlying
+   * resource kind (see isBootableVolumePVCKind):
+   *   - Raw PersistentVolumeClaim-kind rows → BootableVolumesActions →
+   *     useBootableVolumesActions.tsx → id "bootablevolume-action-upload-to-registry"
+   *     (rendered as <MenuItem data-test={action.id}>).
+   *   - DataSource-kind rows (e.g. DataVolume+DataSource, as created by
+   *     createBootableVolumeViaApi in the upload-to-registry spec) → DataSourceActions →
+   *     useDataSourceActions.tsx → id "datasource-action-upload-to-registry"
+   *     (rendered as <DropdownItem data-test={action.id}>).
+   * Both ids are matched so this works regardless of which kind of row it's used on.
+   */
+  private readonly _uploadToRegistryActionSelector =
+    '[data-test="bootablevolume-action-upload-to-registry"], ' +
+    '[data-test="datasource-action-upload-to-registry"]';
+
   constructor(page: Page) {
     super(page);
   }
@@ -80,7 +97,10 @@ export class BootableVolumesRowActionsComponent extends BaseComponent {
   /**
    * Opens the kebab menu for a volume row and waits for the dropdown to be visible.
    * The kebab toggle is the only <button> in each row (the name is an <a> link).
-   * Menu items have no data-test attributes — they are plain PF6 .pf-v6-c-menu__item buttons.
+   * Most menu items are plain PF6 .pf-v6-c-menu__item buttons with no data-test
+   * attribute, except "Upload to registry" which carries
+   * `data-test="bootablevolume-action-upload-to-registry"` (see
+   * _uploadToRegistryActionTestId) via ActionDropdownItem/useBootableVolumesActions.
    */
   private async openRowKebabMenu(volumeName: string): Promise<void> {
     const byTestId = this.locator('tbody tr').filter({
@@ -221,6 +241,41 @@ export class BootableVolumesRowActionsComponent extends BaseComponent {
   async clickRowActionUploadToRegistry(volumeName: string): Promise<void> {
     await this.openRowKebabMenu(volumeName);
     await this.clickMenuItemByText('Upload to registry');
+  }
+
+  /**
+   * Clicks the "Upload to registry" action in an already-open kebab menu
+   * (e.g. after isUploadToRegistryActionDisabled()). Does not re-open the kebab.
+   */
+  async clickOpenUploadToRegistryAction(): Promise<void> {
+    const action = this.locator(this._uploadToRegistryActionSelector).first();
+    await this.robustClick(action);
+  }
+
+  /**
+   * Returns the "no permission" tooltip text shown when hovering the disabled
+   * "Upload to registry" action. Call after isUploadToRegistryActionDisabled()
+   * returns true, while the kebab menu is still open.
+   */
+  async getUploadToRegistryActionTooltipText(): Promise<string> {
+    const action = this.locator(this._uploadToRegistryActionSelector).first();
+    await action.hover();
+    const tooltip = this.locator('.pf-v6-c-tooltip__content');
+    await tooltip.waitFor({ state: 'visible', timeout: TestTimeouts.UI_ELEMENT_VISIBILITY });
+    return (await tooltip.textContent())?.trim() ?? '';
+  }
+
+  /**
+   * Opens the kebab menu for the given volume row and returns whether the
+   * "Upload to registry" action is disabled (aria-disabled="true", driven by
+   * `disabled: !canExport` in useBootableVolumesActions.tsx / useDataSourceActions.tsx).
+   * Leaves the kebab open so callers can inspect the tooltip or click the action next.
+   */
+  async isUploadToRegistryActionDisabled(volumeName: string): Promise<boolean> {
+    await this.openRowKebabMenu(volumeName);
+    const action = this.locator(this._uploadToRegistryActionSelector).first();
+    await action.waitFor({ state: 'visible', timeout: TestTimeouts.UI_ELEMENT_VISIBILITY });
+    return (await action.getAttribute('aria-disabled')) === 'true';
   }
 
   /**
