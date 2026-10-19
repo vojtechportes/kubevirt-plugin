@@ -8,7 +8,7 @@ import type { FullConfig } from '@playwright/test';
 import type { SetupContext } from './rule-engine';
 import { getSetupRules, RuleEngine } from './rule-engine';
 
-async function globalSetup(_config: FullConfig) {
+async function globalSetup(_config: FullConfig, setupRuleIds?: readonly string[]) {
   if (process.env.SKIP_GLOBAL_SETUP === 'true') {
     logger.info('⏭️ Skipping global setup (SKIP_GLOBAL_SETUP=true)');
     logger.info(' Assuming setup was done by orchestration layer');
@@ -65,7 +65,12 @@ async function globalSetup(_config: FullConfig) {
   };
 
   const engine = new RuleEngine();
-  const rules = getSetupRules();
+  const allRules = getSetupRules();
+  // ACM reuses authentication/configuration without provisioning local resources.
+  const rules = setupRuleIds ? allRules.filter((rule) => setupRuleIds.includes(rule.id)) : allRules;
+  if (setupRuleIds && rules.length !== new Set(setupRuleIds).size) {
+    throw new Error('Requested global setup rules do not match the available rule IDs.');
+  }
 
   if (EnvVariables.skipBrowserSetup) {
     logger.info(
