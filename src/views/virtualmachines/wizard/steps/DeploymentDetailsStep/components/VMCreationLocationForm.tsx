@@ -1,4 +1,4 @@
-import { type FC, useCallback } from 'react';
+import { type FC, useCallback, useEffect, useState } from 'react';
 import { Controller, useWatch } from 'react-hook-form';
 
 import ClusterDropdown from '@kubevirt-utils/components/ClusterProjectDropdown/ClusterDropdown';
@@ -6,6 +6,7 @@ import NamespaceDropdown, {
   type NamespaceDropdownProjectCreatedHandler,
 } from '@kubevirt-utils/components/ClusterProjectDropdown/NamespaceDropdown';
 import FolderSelect from '@kubevirt-utils/components/FolderSelect/FolderSelect';
+import FormGroupHelperText from '@kubevirt-utils/components/FormGroupHelperText/FormGroupHelperText';
 import HelpTextIcon from '@kubevirt-utils/components/HelpTextIcon/HelpTextIcon';
 import { DEFAULT_NAMESPACE } from '@kubevirt-utils/constants/constants';
 import { TREE_VIEW_FOLDERS } from '@kubevirt-utils/hooks/useFeatures/constants';
@@ -14,9 +15,10 @@ import { useKubevirtTranslation } from '@kubevirt-utils/hooks/useKubevirtTransla
 import { getName } from '@kubevirt-utils/resources/shared';
 import { getCluster } from '@multicluster/helpers/selectors';
 import useIsACMPage from '@multicluster/useIsACMPage';
-import { Form, FormGroup } from '@patternfly/react-core';
+import { Form, FormGroup, ValidatedOptions } from '@patternfly/react-core';
 import { useHubClusterName } from '@stolostron/multicluster-sdk';
 import { useVMWizardForm } from '@virtualmachines/wizard/form/VMWizardFormProvider';
+import useCanCreateVMInDefaultNamespace from '@virtualmachines/wizard/hooks/useCanCreateVMInDefaultNamespace';
 import { useWizardVMDraft } from '@virtualmachines/wizard/hooks/useWizardVMDraft';
 import { VMCreationMethod } from '@virtualmachines/wizard/utils/constants';
 import { clearWizardDraftPendingUploads } from '@virtualmachines/wizard/utils/utils';
@@ -27,6 +29,9 @@ const VMCreationLocationForm: FC = () => {
   const { t } = useKubevirtTranslation();
   const isACMPage = useIsACMPage();
   const [hubClusterName] = useHubClusterName();
+  const [pendingDefaultAccessCluster, setPendingDefaultAccessCluster] = useState<string | null>(
+    null,
+  );
 
   const { featureEnabled: treeViewFoldersEnabled, loading: treeViewFoldersLoading } =
     useFeatures(TREE_VIEW_FOLDERS);
@@ -38,6 +43,43 @@ const VMCreationLocationForm: FC = () => {
     control,
     name: ['deployment.cluster', 'deployment.folder', 'deployment.project'],
   });
+
+  const {
+    canCreate: canCreateInDefault,
+    loading: defaultAccessLoading,
+    shouldValidate,
+  } = useCanCreateVMInDefaultNamespace({
+    cluster,
+    enabled: isACMPage,
+    shouldValidate: pendingDefaultAccessCluster !== null,
+  });
+
+  useEffect(() => {
+    if (pendingDefaultAccessCluster === null) {
+      return;
+    }
+
+    if (cluster !== pendingDefaultAccessCluster || defaultAccessLoading) {
+      return;
+    }
+
+    if (!canCreateInDefault) {
+      setValue('deployment.project', '', {
+        shouldDirty: true,
+        shouldTouch: shouldValidate,
+        shouldValidate,
+      });
+    }
+
+    setPendingDefaultAccessCluster(null);
+  }, [
+    canCreateInDefault,
+    cluster,
+    defaultAccessLoading,
+    pendingDefaultAccessCluster,
+    setValue,
+    shouldValidate,
+  ]);
 
   const clearLocationDependentVM = useCallback((): void => {
     clearWizardDraftPendingUploads(getValues, setValue);
@@ -80,12 +122,18 @@ const VMCreationLocationForm: FC = () => {
                   if (selectedCluster === getValues('deployment.cluster')) return;
                   field.onChange(selectedCluster);
                   setValue('deployment.folder', '');
-
-                  // Only keep DEFAULT_NAMESPACE across clusters
-                  if (getValues('deployment.project') !== DEFAULT_NAMESPACE) {
-                    setValue('deployment.project', '', { shouldValidate: true });
-                  }
                   clearLocationDependentVM();
+
+                  if (getValues('deployment.project') === DEFAULT_NAMESPACE) {
+                    setPendingDefaultAccessCluster(selectedCluster);
+                    return;
+                  }
+
+                  setValue('deployment.project', '', {
+                    shouldDirty: true,
+                    shouldTouch: true,
+                    shouldValidate: true,
+                  });
                 }}
                 selectedCluster={value as string}
               />
@@ -97,21 +145,29 @@ const VMCreationLocationForm: FC = () => {
         <Controller
           control={control}
           name="deployment.project"
-          render={({ field: { onChange: onProjectFieldChange, ref: _ref } }) => (
-            <NamespaceDropdown
-              bookmarkCluster={hubClusterName}
-              cluster={cluster}
-              includeAllProjects={false}
-              onChange={(selectedProject) => {
-                if (selectedProject === getValues('deployment.project')) return;
-                onProjectFieldChange(selectedProject);
-                setValue('deployment.folder', '');
-                clearLocationDependentVM();
-              }}
-              onlyUserProjects
-              onProjectCreated={onLocationProjectCreated}
-              selectedProject={project ?? ''}
-            />
+          render={({ field: { onChange: onProjectFieldChange, ref: _ref }, fieldState }) => (
+            <>
+              <NamespaceDropdown
+                bookmarkCluster={hubClusterName}
+                cluster={cluster}
+                includeAllProjects={false}
+                isLoading={pendingDefaultAccessCluster !== null}
+                onChange={(selectedProject) => {
+                  if (selectedProject === getValues('deployment.project')) return;
+                  onProjectFieldChange(selectedProject);
+                  setValue('deployment.folder', '');
+                  clearLocationDependentVM();
+                }}
+                onlyUserProjects
+                onProjectCreated={onLocationProjectCreated}
+                selectedProject={project ?? ''}
+              />
+              {fieldState.error?.message && fieldState.isTouched && (
+                <FormGroupHelperText validated={ValidatedOptions.error}>
+                  {fieldState.error.message}
+                </FormGroupHelperText>
+              )}
+            </>
           )}
         />
       </FormGroup>
